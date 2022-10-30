@@ -27,9 +27,11 @@ class Street:
         return self._length
 
 class Map:
+    """
+    """
     _intersections: list(Intersection)
     _streets: list(Street)
-    _matrix: int[][]
+    _matrix: np.array #adjance matrix
 
     def __init__(self):
         self._intersections = None

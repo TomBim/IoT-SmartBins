@@ -1,6 +1,3 @@
-from ssl import OP_NO_RENEGOTIATION
-
-
 class Person:
     _id=None
     _pos=None
@@ -14,33 +11,32 @@ class Person:
     _has_trash=False #if consuming something, it's false
     _time_alive=None
     _distance_carrying_trash=None
+    _map_=None
 
-    def __init__(self, id, origin, destination, education):
+    def __init__(self, id, origin, destination, map_, *args):
         self._id = id
         self._origin = origin
         self._destination = destination
-        self._education = education
-        self._path = ??? #create path
+        self._map_ = map_
+        self._path = NotImplemented
 
-    def getID(self):
+    def _path_planner(self):
+        pass
+
+    def get_id(self):
         return self._id
 
-    def getEducation(self):
-        return self._education
-
-    def getPath(self):
+    def get_path(self):
         return self._path
 
-    def getOrigin(self):
+    def get_origin(self):
         return self._origin
 
-    def getDestination(self):
+    def get_destination(self):
         return self._destination
     
-    def setOrigin(self, origin):
+    def set_origin(self, origin):
         self._origin = origin
-        self._path = ???
 
-    def setDestination(self, destination):
+    def set_destination(self, destination):
         self._destination = destination
-        self._path = ???

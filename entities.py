@@ -1,5 +1,5 @@
 from math import inf, sqrt
-import Map
+import map
 import heapq
 
 from sklearn import neighbors

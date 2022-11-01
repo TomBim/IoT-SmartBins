@@ -5,10 +5,14 @@ import numpy as np
 class Intersection:
     _pos: tuple[float, float] #tupla position
 
-    def __init__(self, x: float, y: float):
+    def __init__(self, id: int, x: float, y: float):
+        self._id = id
         self._pos = (x,y)
         self._neighbors: list[Intersection] = []
         self._dist_to_neighbors: list[float] = []
+
+    def get_id(self) -> int:
+        return self._id
 
     def get_pos(self) -> tuple[float, float]:
         return self._pos
@@ -57,7 +61,7 @@ class Map:
         self._streets = []
 
     def add_intersection(self, x: float, y: float):
-        self._intersections.append(Intersection(x,y))
+        self._intersections.append(Intersection(len(self._intersections),x,y))
 
     def add_street(self, indexA: int, indexB: int):
         new_street = Street(self._intersections[indexA], self._intersections[indexB])
@@ -82,5 +86,5 @@ if __name__ == "__main__":
 
     mapa.add_street(0, 1)
 
-    print(mapa.get_intersection(0).get_neighbors()[0].get_pos())
+    print(mapa.get_intersection(1).get_id())
     list(map(lambda x: print(x.get_vector()[0].get_pos(),"-", x.get_vector()[1].get_pos()), mapa.get_streets_list()))

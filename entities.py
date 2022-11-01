@@ -27,7 +27,7 @@ class Person:
         self._map_ = map_
         self._path = self._path_planner()
 
-    def _path_planner(self) -> list[Map.Intersection]:
+    def _path_planner(self) -> list[map.Intersection]:
         intersections_info = self._dijkstra()
         return self._path_constructor(intersections_info)
 

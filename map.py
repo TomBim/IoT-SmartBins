@@ -3,8 +3,6 @@ from math import sqrt
 import numpy as np
 
 class Intersection:
-    _pos: tuple[float, float] #tupla position
-
     def __init__(self, id: int, x: float, y: float):
         self._id = id
         self._pos = (x,y)
@@ -34,9 +32,6 @@ class Intersection:
         return self._dist_to_neighbors
 
 class Street:
-    _vec: tuple[Intersection, Intersection]
-    _length: float
-
     def __init__(self, A: Intersection, B: Intersection):
         self._vec = (A, B)
         point1 = A.get_pos()
@@ -52,9 +47,6 @@ class Street:
         return self._length
 
 class Map:
-    _intersections: list[Intersection]
-    _streets: list[Street]
-
     def __init__(self):
         self._intersections = []
         self._streets = []

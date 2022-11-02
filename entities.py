@@ -2,7 +2,7 @@ from math import inf, sqrt
 import map
 import heapq
 
-from sklearn import neighbors
+#TODO: remove class variables: put them inside constructor
 class Person:
     _id=None
     _pos=None

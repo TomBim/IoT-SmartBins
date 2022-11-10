@@ -79,3 +79,18 @@ if __name__ == "__main__":
 
     print(mapa.get_intersection(1).get_id())
     list(map(lambda x: print(x.get_vector()[0].get_pos(),"-", x.get_vector()[1].get_pos()), mapa.get_streets_list()))
+
+class Pos_Street:
+    def __init__(self, street: Street, pos_in_street: float):
+        self._street: Street = street
+        self._pos_in_street: float = pos_in_street
+
+    def __init__(self):
+        self._street: Street = None
+        self._pos_in_street: float = None
+        
+    def get_street(self):
+        return self._street #NEED COPY?
+
+    def get_pos_in_street(self):
+        return self._pos_in_street

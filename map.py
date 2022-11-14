@@ -68,7 +68,6 @@ class Map:
         return self._streets
 
 
-
 if __name__ == "__main__":
     mapa = Map()
     positions = [(0.0, 0.0), (0.0, 1.0)]
@@ -81,16 +80,52 @@ if __name__ == "__main__":
     list(map(lambda x: print(x.get_vector()[0].get_pos(),"-", x.get_vector()[1].get_pos()), mapa.get_streets_list()))
 
 class Pos_Street:
-    def __init__(self, street: Street, pos_in_street: float):
+    def __init__(self, street: Street = None, pos_in_street: float = None):
         self._street: Street = street
         self._pos_in_street: float = pos_in_street
-
-    def __init__(self):
-        self._street: Street = None
-        self._pos_in_street: float = None
         
     def get_street(self):
         return self._street #NEED COPY?
 
     def get_pos_in_street(self):
         return self._pos_in_street
+
+def read_map(file_intersections: str, file_streets: str, file_commertial_points: str) -> Map:
+    """ function used to read a file with intersections and
+    return the map (Map)
+
+    Args:
+        file_intersections (str):
+            - name of the file with the intersections
+            - must be one intersection per line, with
+            x and y separated by a comma: "x,y"
+        file_streets (str):
+            - name of the file with the streets
+            - must be one street per line, with A and B
+            being the index of the intersections and separeted by
+            comma: "A,B"
+        file_commertial_points (str):
+            - name of the file with the commertial points
+            - must have the type (int) and the position
+            - the position must be like this: "index,float"
+                - index = index of the street
+                - float = position in the street (0 -> 1)
+            - so: "type,index,float"
+            -idk if we will use this ??????????????????
+        Return:
+        map (Map)
+    """
+
+    mapa = Map()
+
+    f = open(file_intersections, "r")
+    for line in f:
+        point = line.split(",")
+        mapa.add_intersection(float(point[0]), float(point[1]))    
+    f.close()
+
+    f = open(file_streets, "r")
+    for line in f:
+        street = line.split(",")
+        mapa.add_street(int(street[0]), int(street[1]))
+    f.close()

@@ -3,7 +3,6 @@ from pickle import FALSE, TRUE
 import map
 import heapq
 
-#TODO: remove class variables: put them inside constructor
 class Person:
     """Private variables
         id: int

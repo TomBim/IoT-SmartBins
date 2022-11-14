@@ -119,6 +119,7 @@ def create_rand_streets(points: list[tuple[float]]) -> list[tuple[int]]:
         s.sort()
     return s
 
+# TODO: finish it
 def create_rand_com_points(points: list[tuple[float]], streets: list[tuple[int]], weight_for_com_points: tuple[int]) -> list[entities.Commercial_Point]:
     cp = []
     n_streets = len(streets)

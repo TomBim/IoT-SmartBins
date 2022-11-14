@@ -1,10 +1,13 @@
 import random as rand
 import numpy as np
+import map
+import entities
+import math as m
 
-def create_rand_points(n_points: int, max_distance: float) -> list[tuple[float]]:
+def create_rand_points(n_points: int, max_range: float) -> list[tuple[float]]:
     p = []
     for n in range(n_points):
-        p.append((rand.uniform(-max_distance,max_distance),rand.uniform(-max_distance,max_distance)))
+        p.append((rand.uniform(-max_range,max_range),rand.uniform(-max_range,max_range)))
     return p
 
 
@@ -84,6 +87,8 @@ def create_rand_streets_aux(points: list [tuple[float]], s: list[tuple[int]], s0
 def create_rand_streets(points: list[tuple[float]]) -> list[tuple[int]]:
     s: list[tuple[int]] = []
     leng = len(points)
+    # n_streets won't necessarily be the number of streets. It will be just a guide number.
+    # We take care of the case in which it's not possible to create all these streets after.
     n_streets = rand.randrange(int((leng*(leng-1))/2))
     print(f"previsto: {n_streets}")
     if n_streets > 0:        
@@ -114,8 +119,40 @@ def create_rand_streets(points: list[tuple[float]]) -> list[tuple[int]]:
         s.sort()
     return s
 
-def generate_random_map(n_points: int, max_distance: float, file_intersections: str, file_streets: str):
-    p = create_rand_points(n_points, max_distance)
+def create_rand_com_points(points: list[tuple[float]], streets: list[tuple[int]], weight_for_com_points: tuple[int]) -> list[entities.Commercial_Point]:
+    cp = []
+    n_streets = len(streets)
+    n_com_points = rand.randrange(n_streets*3)
+    random_types = rand.choices((0,1,2), weights=weight_for_com_points, k=n_com_points)
+    for i in range(n_com_points):
+        if random_types[i] == 0: # food
+            mu_vol = 1e-3 + 2*rand.random() # between 1mL and 2L
+            sigma_vol = 0.8 #precisa olhar
+            trash_pot = entities.Trash_Potential(m.sqrt(rand.random()),0)
+        elif random_types[i] == 1: # non-food
+            trash_pot = entities.Trash_Potential()
+        else: # job
+            trash_pot = entities.Trash_Potential(0)
+        cp.append(entities.Commercial_Point(random_types[i],rand.random(),trash_pot,
+    
+
+
+
+    
+
+def generate_random_map(n_points: int, max_range: float, file_intersections: str, file_streets: str, weight_for_com_points: tuple[int], file_com_points: str):
+    """generates the files of random intersections, streets, and commertial points
+
+    Args:
+        n_points (int): number of intersection points
+        max_range (float): maximal size of the map
+            map can go from (-max_range,-max_range) to (max_range,max_range)
+        file_intersections (str): name of file where the function will put the random intersection points
+        file_streets (str): name of file where the function will put the random streets
+        weight_for_com_points (tuple[int]): weight considered while generating the type of commertial points
+        file_com_points (str): name of file where the function will put the random commertial points
+    """
+    p = create_rand_points(n_points, max_range)
     s = create_rand_streets(p)
 
     f = open(file_intersections, "w")
@@ -141,6 +178,3 @@ def generate_random_map(n_points: int, max_distance: float, file_intersections: 
     f.close
     mat.write("]")
     mat.close()
-
-generate_random_map(10,1000,"intersections.txt", "streets.txt")
-print("ok")

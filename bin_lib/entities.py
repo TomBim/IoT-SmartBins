@@ -2,6 +2,8 @@ from math import inf, sqrt
 from pickle import FALSE, TRUE
 import map
 import heapq
+import random as rand
+import math as m
 
 class Person:
     """Private variables
@@ -147,22 +149,89 @@ class Bin:
         self._full = FALSE
         #self._last_time_was_empted = ?
 
+class Trash_Potential:
+    """Variables:
+        prob_trash (float): probability of someone leaves the store with trash
+        mu_vol (float): gaussian of volume of the trash
+        sigma_vol (float): gaussian of volume of the trash
+        mu_time_2 (float): gaussian 2 of time (see OBS)
+        sigma_time_1 (float): gaussian 1 of time (see OBS)
+        sigma_time_2 (float): gaussian 2 of time (see OBS)
+        weight_1 (float): weight for the mean of the gaussians of time (see OBS)
+        weight_2 (float): weight for the mean of the gaussians of time (see OBS)
+        p (float): weight1/(weight1 + weight2). In the case if weight1 + weight2 = 0, it will be -1.
+
+    OBS:
+        We are considering, here, a function f for the distribution of the time of consumption.
+        The time of consumption is the time that the person is consuming his food/whatever, i.e.,
+        time after getting out of the store for needing a bin
+        This function f will be the mean between 2 gaussians. That way, we can represent both peaks:
+        people who eats in place/need a bin just after leaving the store; and people who leaves
+        eating and will need a bin a little far from the store.
+    """
+    def __init__(self, prob_trash: float, mu_vol: float, sigma_vol: float, mu_time_2: float, sigmas_time: tuple[float], weights_time: tuple[float]):
+        self._prob_trash = prob_trash
+        self._mu_vol = mu_vol
+        self._sigma_vol = sigma_vol
+        self._sigma_time_1 = sigmas_time[0]
+        self._mu_time_2 = mu_time_2
+        self._sigma_time_2 = sigmas_time[1]
+        self._weight_1 = weights_time[0]
+        self._weight_2 = weights_time[1]
+        if self._weight_1 + self._weight_2 != 0:
+            self._p = self._weight_1 / (self._weight_1 + self._weight_2)
+        else:
+            self._p = -1
+
+    def generate_trash(self) -> list[bool, tuple[float]]:
+        """it should be called for each person that leaves the store.
+        This function see if the person will leave with trash and 
+        which are the time of consumption and the volume
+
+        Return:
+            bool: if the person leaves with trash
+            tuple[float]: time of consumption and volume of trash:
+                [0]: time
+                [1]: volume
+        """
+        # trash?
+        trash = (rand.random() < self._prob_trash)
+        if not trash:
+            return False
+
+        # volume of trash
+        vol = rand.gauss(mu=self._mu_vol, sigma=self._sigma_vol)
+        while vol <= .01e-3: # 0.01 mL = (0.2 mm)³
+            vol = rand.gauss(mu=self._mu_vol, sigma=self._sigma_vol)
+
+        # time of consumption
+        if self._p == -1:
+            return [True, (vol, 0)]
+        if rand.random() < self._p:
+            time = m.fabs(rand.gauss(mu=0, sigma=self._sigma_time_1))
+            return [True, (vol, time)]
+        else:
+            time = rand.gauss(mu=self._mu_time_2, sigma=self._sigma_time_2)
+            while time <= 0:
+                time = rand.gauss(mu=self._mu_time_2, sigma= self._sigma_time_2)
+            return [True, (vol, time)]
+   
+
 class Commercial_Point:
     """Private variables:
-        type: int
+        type (int):
             0: Food store
             1: Non-food store
             2: Job
-        customer_potential: float
+        attractiveness (float):
             0 -> 1
-            if just a job point, then it's worker_potential
-        trash_generation_potential: float (L)
-            the volume of the trash that a person can get in this store
-        pos: float[2]
-        pos_street: Pos_Street
+            represents the potential of getting customers
+        trash_generation_potential (Trash_Potential)
+        pos (float[2])
+        pos_street (Pos_Street)
     """
 
-    def __init__(self, type: int, customer_potential: float, trash_generation_potential: float, street: map.Street, pos_in_street: float):
+    def __init__(self, type: int, customer_potential: float, trash_generation_potential: Trash_Potential, street: map.Street, pos_in_street: float):
         self._type = type
         self._customer_potential = customer_potential
         self._trash_generation_potential = trash_generation_potential
@@ -173,7 +242,7 @@ class Commercial_Point:
         y = A[1] + (B[1]-A[1])*pos_in_street
         self._pos = (x,y)
 
-    def __init__(self, type: int, customer_potential: float, trash_generation_potential: float, pos_street: map.Pos_Street):
+    def __init__(self, type: int, customer_potential: float, trash_generation_potential: Trash_Potential, pos_street: map.Pos_Street):
         self._type = type
         self._customer_potential = customer_potential
         self._trash_generation_potential = trash_generation_potential
@@ -189,3 +258,16 @@ class Commercial_Point:
 
     def get_pos_in_street(self) -> float:
         return self._pos_street.get_pos_in_street
+
+    def generate_trash(self) -> list[bool, tuple[float]]:
+        """it should be called for each person that leaves the store.
+        This function see if the person will leave with trash and 
+        which are the time of consumption and the volume
+
+        Return:
+            bool: if the person leaves with trash
+            tuple[float]: time of consumption and volume of trash:
+                [0]: time
+                [1]: volume
+        """
+        return self._trash_generation_potential.generate_trash()

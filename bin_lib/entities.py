@@ -1,9 +1,9 @@
 from math import inf, sqrt
 from pickle import FALSE, TRUE
-import map
 import heapq
 import random as rand
 import math as m
+import bin_lib.map as map
 
 class Person:
     """Private variables
@@ -154,13 +154,13 @@ class Trash_Potential:
         prob_trash (float): probability of someone leaves the store with trash
         mu_vol (float): gaussian of volume of the trash
         sigma_vol (float): gaussian of volume of the trash
-        mu_time_2 (float): gaussian 2 of time (see OBS)
-        sigma_time_1 (float): gaussian 1 of time (see OBS)
-        sigma_time_2 (float): gaussian 2 of time (see OBS)
+        mu_time_1 (float): gaussian 2 of time (see OBS)
+        sigma_time_0 (float): gaussian 1 of time (see OBS)
+        sigma_time_1 (float): gaussian 2 of time (see OBS)
+        weight_0 (float): weight for the mean of the gaussians of time (see OBS)
         weight_1 (float): weight for the mean of the gaussians of time (see OBS)
-        weight_2 (float): weight for the mean of the gaussians of time (see OBS)
-        p (float): weight1/(weight1 + weight2). In the case if weight1 + weight2 = 0, it will be -1.
-
+        
+        p (float): weight0/(weight0 + weight1). In the case if weight0 + weight1 = 0, it will be -1.
     OBS:
         We are considering, here, a function f for the distribution of the time of consumption.
         The time of consumption is the time that the person is consuming his food/whatever, i.e.,
@@ -168,20 +168,38 @@ class Trash_Potential:
         This function f will be the mean between 2 gaussians. That way, we can represent both peaks:
         people who eats in place/need a bin just after leaving the store; and people who leaves
         eating and will need a bin a little far from the store.
+        Gaussian 0: mean = 0
+        Gaussian 1: mean > 0
     """
-    def __init__(self, prob_trash: float, mu_vol: float, sigma_vol: float, mu_time_2: float, sigmas_time: tuple[float], weights_time: tuple[float]):
+    def __init__(self, prob_trash: float, payload: dict=None):
+        """constructor of Trash_Potential
+        Args:
+            prob_trash (float): _description_
+            payload (dict, optional): dictionary with the following arguments (necessary for prob_trash != 0):
+                mu_vol (float): mu of gaussian of volume of the trash
+                sigma_vol (float): sigma of gaussian of volume of the trash
+                mu_time_1 (float): mu of gaussian 1 of time (see OBS)
+                sigmas_time (tuple(float)): sigmas of gaussians of time (see OBS)
+                weights (tuple(float)): weights for the mean of the gaussians of time (see OBS)        
+        """
         self._prob_trash = prob_trash
-        self._mu_vol = mu_vol
-        self._sigma_vol = sigma_vol
-        self._sigma_time_1 = sigmas_time[0]
-        self._mu_time_2 = mu_time_2
-        self._sigma_time_2 = sigmas_time[1]
-        self._weight_1 = weights_time[0]
-        self._weight_2 = weights_time[1]
-        if self._weight_1 + self._weight_2 != 0:
-            self._p = self._weight_1 / (self._weight_1 + self._weight_2)
-        else:
-            self._p = -1
+        if not prob_trash == 0:
+            self._mu_vol = payload['mu_vol']
+            self._sigma_vol = payload['sigma_vol']
+
+            sigmas_time = payload['sigmas_time']
+            self._sigma_time_0 = sigmas_time[0]
+            self._sigma_time_1 = sigmas_time[1]
+            self._mu_time_1 = payload['mu_time_1']
+            
+            weights = payload['weights']
+            self._weight_0 = weights[0]
+            self._weight_1 = weights[1]
+            
+            if self._weight_0 + self._weight_1 != 0:
+                self._p = self._weight_0 / (self._weight_0 + self._weight_1)
+            else:
+                self._p = -1
 
     def generate_trash(self) -> list[bool, tuple[float]]:
         """it should be called for each person that leaves the store.
@@ -208,15 +226,14 @@ class Trash_Potential:
         if self._p == -1:
             return [True, (vol, 0)]
         if rand.random() < self._p:
-            time = m.fabs(rand.gauss(mu=0, sigma=self._sigma_time_1))
+            time = m.fabs(rand.gauss(mu=0, sigma=self._sigma_time_0))
             return [True, (vol, time)]
         else:
-            time = rand.gauss(mu=self._mu_time_2, sigma=self._sigma_time_2)
+            time = rand.gauss(mu=self._mu_time_1, sigma=self._sigma_time_1)
             while time <= 0:
-                time = rand.gauss(mu=self._mu_time_2, sigma= self._sigma_time_2)
+                time = rand.gauss(mu=self._mu_time_1, sigma= self._sigma_time_1)
             return [True, (vol, time)]
    
-
 class Commercial_Point:
     """Private variables:
         type (int):
@@ -247,17 +264,21 @@ class Commercial_Point:
         self._customer_potential = customer_potential
         self._trash_generation_potential = trash_generation_potential
         self._pos_street = pos_street
-        A = pos_street.get_street.get_vector()[0].get_pos()
-        B = pos_street.get_street.get_vector()[1].get_pos()
-        x = A[0] + (B[0]-A[0])*pos_street.get_pos_in_street
-        y = A[1] + (B[1]-A[1])*pos_street.get_pos_in_street
+        vec = pos_street.get_street().get_vector()
+        A = vec[0].get_pos()
+        B = vec[1].get_pos()
+        x = A[0] + (B[0]-A[0]) * pos_street.get_pos_in_street()
+        y = A[1] + (B[1]-A[1]) * pos_street.get_pos_in_street()
         self._pos = (x,y)
 
+    def get_type(self) -> int:
+        return self._type
+
     def get_pos(self) -> tuple[float, float]:
-        return self._pos_street.get_street
+        return self._pos
 
     def get_pos_in_street(self) -> float:
-        return self._pos_street.get_pos_in_street
+        return self._pos_street
 
     def generate_trash(self) -> list[bool, tuple[float]]:
         """it should be called for each person that leaves the store.

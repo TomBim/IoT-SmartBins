@@ -1,11 +1,14 @@
-import map
-import entities
+from bin_lib import *
 
-file_intersections = "intersection_points.txt"
-file_streets = "streets.txt"
+file_intersections = "bin_lib/intersection_points.txt"
+file_streets = "bin_lib/streets.txt"
 
-def map_test(files: list(str)):
-    mapa: map.Map = map.read_map(files[0], files[1])
-    streets_list = mapa.get_intersection_list
-    for x in streets_list:
-        x.get_length
+def map_test(files: list[str]):
+    mapa = map.read_map(files[0], files[1], "")
+    intersections = mapa.get_intersection_list()
+    streets = mapa.get_streets_list()
+    for x in streets:
+        x.get_length()
+    some_functions.plot_map(intersections, streets)
+
+map_test((file_intersections, file_streets))

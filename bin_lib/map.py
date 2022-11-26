@@ -26,7 +26,7 @@ class Intersection:
         self._dist_to_neighbors = distance if distance != None else self._calculate_distance_to_neighbor(neighbor)
 
     def get_neighbors(self) -> list[Intersection]:
-        return self._neighbors
+        return self._neighbors.copy()
 
     def get_distances_to_neighbors(self) -> list[float]:
         return self._dist_to_neighbors
@@ -58,14 +58,21 @@ class Map:
         new_street = Street(self._intersections[indexA], self._intersections[indexB])
         self._streets.append(new_street)
 
-    def get_intersection_list(self) -> list[Intersection]:
-        return self._intersections
+    def get_intersections_list(self) -> list[Intersection]:
+        """CAREFUL: the elements in the list are the original ones"""
+        return self._intersections.copy()
     
     def get_intersection(self, index: int) -> Intersection:
+        """CAREFUL: the return isn't a copy; it's the original Intersection"""
         return self._intersections[index]
 
     def get_streets_list(self) -> list[Street]:
-        return self._streets
+        """CAREFUL: the elements in the list are the original ones"""
+        return self._streets.copy()
+
+    def get_street(self, index: int) -> Street:
+        """CAREFUL: the return isn't a copy; it's the original Street"""
+        return self._streets[index]
 
 
 if __name__ == "__main__":
@@ -80,15 +87,16 @@ if __name__ == "__main__":
     list(map(lambda x: print(x.get_vector()[0].get_pos(),"-", x.get_vector()[1].get_pos()), mapa.get_streets_list()))
 
 class Pos_Street:
-    def __init__(self, street: Street = None, pos_in_street: float = None):
+    def __init__(self, street: Street, pos_in_street: float):
         self._street: Street = street
         self._pos_in_street: float = pos_in_street
         
     def get_street(self):
-        return self._street #NEED COPY?
+        return self._street
 
     def get_pos_in_street(self):
         return self._pos_in_street
+
 
 def read_map(file_intersections: str, file_streets: str, file_commertial_points: str) -> Map:
     """ function used to read a file with intersections and
@@ -129,3 +137,5 @@ def read_map(file_intersections: str, file_streets: str, file_commertial_points:
         street = line.split(",")
         mapa.add_street(int(street[0]), int(street[1]))
     f.close()
+
+    return mapa

@@ -5,6 +5,7 @@ import random as rand
 import math as m
 import bin_lib.map as map
 import bin_lib.some_functions as fcts
+import numpy as np
 
 class Entity:
     def __init__(self, id: int, pos_street: map.Pos_Street) -> None:
@@ -52,10 +53,11 @@ class Person(Entity):
         self._fov=None
         self._max_distance_carrying_trash=None
         self._time_of_consumption=None
-        self._speed=None
+        self._speed: float=None
         self._has_trash=False    
         self._time_alive=None
         self._distance_carrying_trash=None
+        self._distance_to_destination = self._calculate_distance_to_destination()
 
     def _path_planner(self) -> list[map.Intersection]:
         intersections_info = self._dijkstra()
@@ -91,7 +93,7 @@ class Person(Entity):
         return intersections_info
 
     def _path_constructor(self, intersections_info):
-        destination_intersections = self._destination_street.get_vec()
+        destination_intersections = self._destination_street.get_street().get_vector()
         intersection1_id = destination_intersections[0].get_id()
         intersection2_id = destination_intersections[1].get_id()
         dist_destination_intersection1 = self._calculate_distance(destination_intersections[0].get_pos(), self._destination)
@@ -110,6 +112,17 @@ class Person(Entity):
         
         return reversed_path[::-1]
 
+    def _calculate_distance_to_destination(self):
+        start = self.get_pos_xy()
+        n_intersections = len(self._path)
+        end = self._destination_street.get_pos_xy()
+        d = 0
+        for i in range(n_intersections):
+            aux = self._path[i]
+            d += self._calculate_distance(start, aux)
+            start = aux
+        return d + self._calculate_distance(start, end)
+
     def get_path(self):
         return self._path
 
@@ -124,6 +137,93 @@ class Person(Entity):
 
     def set_destination(self, destination):
         self._destination = destination
+
+    def walk(self, time_walking: int) -> bool:
+        """return if the person got to his destination"""
+        d = self._speed * time_walking
+        start = self._pos_street.get_pos_xy()
+
+        # he arrives?
+        if d < self._distance_to_destination:
+            self._pos_street = self._destination_street
+            return TRUE
+
+        n_intersections = len(self._path)
+
+        # he is already on the destination's street?
+        if n_intersections == 0:
+            s = self._pos_street.get_street()
+            (A, B) = s.get_vector()
+            (Ax, Ay) = A.get_pos()
+            (Bx, By) = B.get_pos()
+            if Ax != Bx: #se nao é reta vertical
+                m = (self._destination_street.get_pos_xy()[0] - start[0])*(Bx-Ax)
+                if m > 0: #apontam para o mesmo lugar
+                    new_pos_in_street = self._pos_street.get_pos_in_street() + d / self._pos_street.get_street().get_length()
+                else:#se apontam em sentidos opostos
+                    new_pos_in_street = self._pos_street.get_pos_in_street() - d / self._pos_street.get_street().get_length()
+            else: #se for vertical
+                new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
+            self._pos_street = map.Pos_Street(self._pos_street.get_street, new_pos_in_street)
+            return FALSE
+        
+        last_intersection = None
+        while d > 0 and n_intersections > 0:
+            next_intersection = self._path[0]
+            distance_to_next_intersection = self._calculate_distance(start, next_intersection)
+            # won't he stop at this street?
+            if d > distance_to_next_intersection:
+                d -= distance_to_next_intersection
+                last_intersection = next_intersection
+                self._path.pop(0)
+                n_intersections -= 1
+            #if he never changed of street - in this walking time
+            elif last_intersection == None:
+                s = self._pos_street.get_street()
+                (A, B) = s.get_vector()
+                (Ax, Ay) = A.get_pos()
+                (Bx, By) = B.get_pos()
+                if Ax != Bx: #se nao é reta vertical
+                    m = (self._destination_street.get_pos_xy()[0] - start[0])*(Bx-Ax)
+                    if m > 0: #apontam para o mesmo lugar
+                        new_pos_in_street = self._pos_street.get_pos_in_street() + d / self._pos_street.get_street().get_length()
+                    else:#se apontam em sentidos opostos
+                        new_pos_in_street = self._pos_street.get_pos_in_street() - d / self._pos_street.get_street().get_length()
+                else: #se for vertical
+                    new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
+                self._pos_street = map.Pos_Street(self._pos_street.get_street, new_pos_in_street)
+                return FALSE
+            # if he changed of street
+            else:
+                s = self._map_.search_for_a_street(last_intersection, next_intersection)
+                (A, B) = s.get_vector()
+                if last_intersection.get_id() == A.get_id():
+                    new_pos_in_street = d / s.get_length()
+                else:
+                    new_pos_in_street = 1 - d / s.get_length()
+                self._pos_street = map.Pos_Street(s, new_pos_in_street)
+                return FALSE
+        
+        # if it got it here, it's because n_intersections got to 0 before d
+        # in this case, last_intersection shouldn't be None
+        s = self._destination_street.get_street()
+        (A, B) = s.get_vector()
+        (Ax, Ay) = A.get_pos()
+        (Bx, By) = B.get_pos()
+        if Ax != Bx: #se nao é reta vertical
+            m = (self._destination_street.get_pos_xy()[0] - start[0])*(Bx-Ax)
+            if m > 0: #apontam para o mesmo lugar
+                new_pos_in_street = self._pos_street.get_pos_in_street() + d / self._pos_street.get_street().get_length()
+            else:#se apontam em sentidos opostos
+                new_pos_in_street = self._pos_street.get_pos_in_street() - d / self._pos_street.get_street().get_length()
+        else: #se for vertical
+            new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
+        self._pos_street = map.Pos_Street(self._pos_street.get_street, new_pos_in_street)
+        return FALSE
+
+                
+
+
 
 class Bin(Entity):
     """Private variables:

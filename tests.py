@@ -10,5 +10,3 @@ def map_test(files: list[str]):
     for x in streets:
         x.get_length()
     some_functions.plot_map(intersections, streets)
-
-map_test((file_intersections, file_streets))

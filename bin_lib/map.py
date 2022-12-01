@@ -39,6 +39,7 @@ class Street:
         self._length = sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
         A.add_neighbor(B, self._length)
         B.add_neighbor(A, self._length)
+        self._intersctions_ids = (A.get_id(), B.get_id())
 
     def get_vector(self) -> tuple[Intersection]:
         return self._vec
@@ -46,10 +47,13 @@ class Street:
     def get_length(self) -> float:
         return self._length
 
+    def get_intersctions_ids(self):
+        return self._intersctions_ids
+
 class Map:
     def __init__(self):
-        self._intersections = []
-        self._streets = []
+        self._intersections: list[Intersection] = []
+        self._streets: list[Street] = []
 
     def add_intersection(self, x: float, y: float):
         self._intersections.append(Intersection(len(self._intersections),x,y))
@@ -74,6 +78,19 @@ class Map:
         """CAREFUL: the return isn't a copy; it's the original Street"""
         return self._streets[index]
 
+    def search_for_a_street(self, intersection_A: Intersection, intersection_B: Intersection) -> Street:
+        A = intersection_A.get_id()
+        B = intersection_B.get_id()
+        if A == B:
+            return None
+        for s in self._streets:
+            (a,b) = s.get_intersctions_ids
+            if (a == A or a == B) and (b == A or b == B):
+                return s
+        return None
+
+            
+
 
 if __name__ == "__main__":
     mapa = Map()
@@ -90,14 +107,21 @@ class Pos_Street:
     def __init__(self, street: Street, pos_in_street: float):
         self._street: Street = street
         self._pos_in_street: float = pos_in_street
-        A = street.get_vector()
+        A, B = street.get_vector()
+        A = A.get_pos()
+        B = B.get_pos()
+        x = A[0]*(1-pos_in_street) + B[0]*pos_in_street
+        y = A[1]*(1-pos_in_street) + B[1]*pos_in_street
+        self._pos_xy = (x,y)
         
-    def get_street(self):
+    def get_street(self) -> Street:
         return self._street
 
-    def get_pos_in_street(self):
-        return self._pos_in_street
+    def get_pos_in_street(self) -> float:
+        return self._pos_in_stree
 
+    def get_pos_xy(self) -> tuple[float, float]:
+        return self._pos_xy
 
 def read_map(file_intersections: str, file_streets: str, file_commertial_points: str) -> Map:
     """ function used to read a file with intersections and

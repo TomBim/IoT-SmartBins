@@ -6,6 +6,34 @@ import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
 
+def search_in_vec_aux(vec: list, value: int, i_min: int, i_max: int) -> int:
+    i = int((i_max + i_min) / 2)
+    aux = vec[i]
+    if aux == value:
+        return i
+    if i_min == i_max:
+        if aux < value:
+            return i_min
+        return i_min-1
+    if aux < value:
+        return search_in_vec_aux(vec, value, i_min, i-1)
+    return search_in_vec_aux(vec, value, i+1, i_max)
+
+def search_in_vec(vec: list, value: int) -> int:
+    """search a value in a vector and returns
+    the index. The vector must be sorted already.
+    If value isn't found, it will return the index 
+    of the last small id.
+
+    Args:
+        vec (list): vector in which we will make the search
+        valeu (int): value searched
+
+    Returns:
+        int: index of the value searched
+    """
+    return search_in_vec_aux(vec, value, 0, len(vec))
+
 def plot_map(mapa: map.Map) -> None:
     plt.figure(figsize=(5,2.7), layout='constrained')
   
@@ -52,7 +80,6 @@ def plot_entities(com_points: list[entities.Commercial_Point]=None, bins: list[e
         plt.plot(xf, yf,'x', color='b', label="Restaurantes", markersize=15)
         plt.plot(xnf, ynf,'*', color='b', label="Lojas", markersize=10)
         plt.plot(xj, yj,'^', color='b', label="Industrias", markersize=10)
-        plt.legend()
 
 
     if not bins == None:
@@ -72,7 +99,8 @@ def plot_entities(com_points: list[entities.Commercial_Point]=None, bins: list[e
             x = np.append(x, pos[0])
             y = np.append(y, pos[1])
         plt.plot(x,y,'*', 'j', label="Pessoas")
-
+    
+    plt.legend()
 
 def create_rand_points(n_points: int, max_range: float) -> list[tuple[float]]:
     p = []
@@ -242,7 +270,6 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int]) -> 
 
     return cp
  
-
 def generate_random_map(n_points: int, max_range: float, file_intersections: str, file_streets: str, weight_for_com_points: tuple[int], file_com_points: str):
     """generates the files of random intersections, streets, and commertial points
 
@@ -282,3 +309,7 @@ def generate_random_map(n_points: int, max_range: float, file_intersections: str
     mat.write("]")
     mat.close()
 
+def generate_a_person(mapa: map.Map, com_points: list[entities.Commercial_Point], id: int) -> entities.Person:
+    n_com_points = len(com_points)
+    origin = rand.randrange()
+    entities.Person(id, )

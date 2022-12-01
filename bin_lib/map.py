@@ -40,7 +40,7 @@ class Street:
         A.add_neighbor(B, self._length)
         B.add_neighbor(A, self._length)
 
-    def get_vector(self) -> tuple(Intersection):
+    def get_vector(self) -> tuple[Intersection]:
         return self._vec
 
     def get_length(self) -> float:
@@ -90,6 +90,7 @@ class Pos_Street:
     def __init__(self, street: Street, pos_in_street: float):
         self._street: Street = street
         self._pos_in_street: float = pos_in_street
+        A = street.get_vector()
         
     def get_street(self):
         return self._street

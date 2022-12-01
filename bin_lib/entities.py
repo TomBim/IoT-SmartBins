@@ -4,8 +4,27 @@ import heapq
 import random as rand
 import math as m
 import bin_lib.map as map
+import bin_lib.some_functions as fcts
 
-class Person:
+class Entity:
+    def __init__(self, id: int, pos_street: map.Pos_Street) -> None:
+        self._id = id
+        self._pos_street = pos_street
+
+    def get_id(self) -> int:
+        return self._id
+
+    def move_to(self, pos_street: map.Pos_Street) -> None:
+        self._pos_street = pos_street
+
+    def get_pos_street(self) -> map.Pos_Street:
+        return self._pos_street
+
+    def get_pos_xy(self) -> tuple[float, float]:
+        return self._pos_street.get_pos_xy  
+            
+
+class Person(Entity):
     """Private variables
         id: int
         pos: float[2]
@@ -23,11 +42,11 @@ class Person:
     """
 
 
-    def __init__(self, id: int, origin_street: map.Pos_Street, destination, map_, *args):
+    def __init__(self, id: int, origin_street: map.Pos_Street, destination_street: map.Pos_Street, map_: map.Map, *args):
         self._id = id
-        self.pos = None
-        self._origin = origin
-        self._destination = destination
+        self._pos_street = origin_street
+        self._origin_street = origin_street
+        self._destination_street = destination_street
         self._map_ = map_
         self._path = self._path_planner()
         self._fov=None
@@ -37,8 +56,6 @@ class Person:
         self._has_trash=False    
         self._time_alive=None
         self._distance_carrying_trash=None
-        self._origin_street=None
-        self._destination_street=None
 
     def _path_planner(self) -> list[map.Intersection]:
         intersections_info = self._dijkstra()
@@ -48,9 +65,9 @@ class Person:
         return sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
     def _dijkstra(self):
-        intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in self._map_.get_intersection_list()]
+        intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in self._map_.get_intersections_list()]
         pq = []
-        starting_intersections = self._origin_street.get_vec()
+        starting_intersections = self._origin_street.get_street().get_vector()
 
         for intersection in starting_intersections:
             distance = self._calculate_distance(self._origin, intersection.get_pos())
@@ -93,9 +110,6 @@ class Person:
         
         return reversed_path[::-1]
 
-    def get_id(self):
-        return self._id
-
     def get_path(self):
         return self._path
 
@@ -111,8 +125,9 @@ class Person:
     def set_destination(self, destination):
         self._destination = destination
 
-class Bin:
+class Bin(Entity):
     """Private variables:
+        id: int
         pos: float[2]
         pos_street: [street,float]
         capacity: float (L)
@@ -121,8 +136,9 @@ class Bin:
         vol_trash: float (L)
         last_time_was_empted: int (seconds)
     """
-    def __init__(self, pos: tuple[float, float], capacity: float):
-        self._pos = pos
+    def __init__(self, id: int, pos_street: map.Pos_Street, capacity: float):
+        self._id = id
+        self._pos_street = pos_street
         self._capacity = capacity
         self._full = FALSE
         self._vol_trash = 0
@@ -134,9 +150,6 @@ class Bin:
 
     def set_capacity(self, new_capacity: float):
         self._capacity = new_capacity
-    
-    def set_pos(self, new_pos: tuple[float, float]):
-        self._pos = new_pos
 
     def put_trash(self, vol_trash):
         self._vol_trash += vol_trash
@@ -234,7 +247,7 @@ class Trash_Potential:
                 time = rand.gauss(mu=self._mu_time_1, sigma= self._sigma_time_1)
             return [True, (vol, time)]
    
-class Commercial_Point:
+class Commercial_Point(Entity):
     """Private variables:
         type (int):
             0: Food store
@@ -248,37 +261,15 @@ class Commercial_Point:
         pos_street (Pos_Street)
     """
 
-    def __init__(self, type: int, customer_potential: float, trash_generation_potential: Trash_Potential, street: map.Street, pos_in_street: float):
-        self._type = type
-        self._customer_potential = customer_potential
-        self._trash_generation_potential = trash_generation_potential
-        self._pos_street = map.Pos_Street(street, pos_in_street)
-        A = street.get_vector()[0].get_pos()
-        B = street.get_vector()[1].get_pos()
-        x = A[0] + (B[0]-A[0])*pos_in_street
-        y = A[1] + (B[1]-A[1])*pos_in_street
-        self._pos = (x,y)
-
     def __init__(self, type: int, customer_potential: float, trash_generation_potential: Trash_Potential, pos_street: map.Pos_Street):
         self._type = type
         self._customer_potential = customer_potential
         self._trash_generation_potential = trash_generation_potential
         self._pos_street = pos_street
-        vec = pos_street.get_street().get_vector()
-        A = vec[0].get_pos()
-        B = vec[1].get_pos()
-        x = A[0] + (B[0]-A[0]) * pos_street.get_pos_in_street()
-        y = A[1] + (B[1]-A[1]) * pos_street.get_pos_in_street()
-        self._pos = (x,y)
+        self._id = -1
 
     def get_type(self) -> int:
         return self._type
-
-    def get_pos(self) -> tuple[float, float]:
-        return self._pos
-
-    def get_pos_in_street(self) -> float:
-        return self._pos_street
 
     def generate_trash(self) -> list[bool, tuple[float]]:
         """it should be called for each person that leaves the store.
@@ -292,3 +283,33 @@ class Commercial_Point:
                 [1]: volume
         """
         return self._trash_generation_potential.generate_trash()
+
+
+class Entities:
+    def __init__(self) -> None:
+        self._ppl: list[Person] = []
+        self._com_points: list[Commercial_Point] = []
+        self._bins: list[Bin] = []
+        self._ppl_ids: list[int] = []
+        self._bins_ids = []
+        self._food_points = 0
+        self._nfood_points = 0
+        self._job_points = 0
+        self._n_people = 0
+        self._n_com_points = 0
+        self._n_bins = 0
+    
+    def new_person(self, p: Person)
+        self._ppl.append(p)
+        self._ppl_ids.append(p.get_id)
+
+    def _id2index(self, id_vec: list[int], id: int):
+        return fcts.search_in_vec(id_vec, id)
+
+    def move_bin(self, id_bin: int, new_pos_street: map.Pos_Street):
+        self._bins[id_bin].move_to(new_pos_street)
+
+    def make_a_person_walk(self, id_person: int, time_of_walk: int):
+        p = self._ppl[fcts.search_in_vec(self._ppl_ids, id_person)]
+        path = p.get_path()
+        pos = p.get_pos_street()

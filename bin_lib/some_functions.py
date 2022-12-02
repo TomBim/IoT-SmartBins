@@ -247,9 +247,9 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int], eve
             prob_trash = m.sqrt(rand.random()) # higher probability, in general
             payload = {
                 "mu_vol": 1e-3 + 2*rand.random(), # between 1mL and 2L
-                "sigma_vol": 0.8,
+                "sigma_vol": 0.3,
                 "mu_time_1": 30 + 150*rand.random(), # between 30s and 3min
-                "sigmas_time": (0.9, rand.randrange(60,99)/100), # 0.9 and 0.60-0.99
+                "sigmas_time": (0.3, rand.randrange(60,99)/100), # 0.9 and 0.60-0.99
                 "weights": (rand.random(), rand.random()) # rly no idea if its good
             }
             trash_pot = entities.Trash_Potential(prob_trash,payload)
@@ -325,7 +325,7 @@ def create_rand_bins(mapa: map.Map, everything: entities.Everything):
     """
     streets = mapa.get_streets_list()
     n_streets = len(streets)
-    n_bins = rand.randrange(n_streets*3)
+    n_bins = n_streets // 3 + rand.randrange(n_streets*3)
     
     for i in range(n_bins):
         # generate random position

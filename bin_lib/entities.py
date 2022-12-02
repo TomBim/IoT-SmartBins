@@ -1,6 +1,5 @@
 from __future__ import annotations
 from math import inf, sqrt
-from pickle import FALSE, TRUE
 import heapq
 import random as rand
 import math as m
@@ -69,6 +68,7 @@ class Person(Entity):
 
 
 
+
     def _dijkstra(self):
         intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in self._map_.get_intersections_list()]
         pq = []
@@ -134,6 +134,9 @@ class Person(Entity):
 
     def get_destination(self):
         return self._destination
+
+    def has_trash(self) -> bool:
+        return self._has_trash
     
     def set_origin(self, origin):
         self._origin = origin
@@ -155,7 +158,7 @@ class Person(Entity):
         # he arrives?
         if d > self._distance_to_destination:
             self._pos_street = self._destination_street
-            return TRUE
+            return True
 
         n_intersections = len(self._path)
         self._time_alive += time_walking
@@ -175,7 +178,7 @@ class Person(Entity):
             else: #se for vertical
                 new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
             self._pos_street = map.Pos_Street(self._pos_street.get_street(), new_pos_in_street)
-            return FALSE
+            return False
         
         last_intersection = None
         while d > 0 and n_intersections > 0:
@@ -202,7 +205,7 @@ class Person(Entity):
                 else: #se for vertical
                     new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
                 self._pos_street = map.Pos_Street(self._pos_street.get_street(), new_pos_in_street)
-                return FALSE
+                return False
             # if he changed of street
             else:
                 s = self._map_.search_for_a_street(last_intersection, next_intersection)
@@ -212,7 +215,7 @@ class Person(Entity):
                 else:
                     new_pos_in_street = 1 - d / s.get_length()
                 self._pos_street = map.Pos_Street(s, new_pos_in_street)
-                return FALSE
+                return False
         
         # if it got it here, it's because n_intersections got to 0 before d
         # in this case, last_intersection shouldn't be None
@@ -229,13 +232,22 @@ class Person(Entity):
         else: #se for vertical
             new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
         self._pos_street = map.Pos_Street(self._pos_street.get_street(), new_pos_in_street)
-        return FALSE
+        return False
 
     def get_fov(self):
         return self._fov
 
     def get_trash_volume(self):
         return self._trash_volume
+
+    def set_true_trash(self):
+        self._has_trash = True
+
+    def increase_time_with_trash(self, increase: int):
+        self._time_carrying_trash += increase
+    
+    def get_time_with_trash(self) -> int:
+        return self._time_carrying_trash
 
 class Bin(Entity):
     """Private variables:
@@ -251,7 +263,7 @@ class Bin(Entity):
     def __init__(self, id: int, pos_street: map.Pos_Street, capacity: float):
         super().__init__(id, pos_street)
         self._capacity = capacity
-        self._full = FALSE
+        self._full = False
         self._vol_trash = 0
         self._last_time_was_empted = -1
         self._filling_rate = 0
@@ -265,13 +277,19 @@ class Bin(Entity):
     def put_trash(self, vol_trash):
         self._vol_trash += vol_trash
         if(self._vol_trash > self._capacity):
-            self._full = TRUE
+            self._full = True
         #update filling_rate
 
     def empty_bin(self):
         self._vol_trash = 0
-        self._full = FALSE
+        self._full = False
         #self._last_time_was_empted = ?
+
+    def get_vol_trash(self):
+        return self._vol_trash
+
+    def get_percentage(self):
+        return self._vol_trash / self._capacity
 
 class Trash_Potential:
     """Variables:
@@ -414,7 +432,7 @@ class Everything:
         self._last_persons_id = -1
         self._last_bins_id = -1
         self._com_points_attractiveness = np.array([])
-        self._trash_in_the_strets = 0
+        self._trash_in_the_streets = 0
         self._map = mapa
     
     def new_person(self):
@@ -513,8 +531,8 @@ class Everything:
     def check_for_nearby_bins(self, id_person: int) -> tuple[bool, int]: 
         """
         This function checks if there is any bin closer than their fov
-        If there is a bin nearby, it should return TRUE 
-        Else, it should return FALSE
+        If there is a bin nearby, it should return True 
+        Else, it should return False
         """
         p = self._ppl[fcts.search_in_vec(self._ppl_ids, id_person)]
         fov = p.get_fov()
@@ -538,13 +556,34 @@ class Everything:
                 if p.walk(TIME_STEP):
                     got_to_destination.append(p.get_id())
             else:
-                # if he gets to destination before needing a bin
-                if p.walk(time_to_finish_consumption):
-                    got_to_destination.append(p.get_id())
-                # else, he needs to find walk searching for a bin
+                if not p.has_trash():
+                    # if he gets to destination before needing a bin
+                    if p.walk(time_to_finish_consumption):
+                        got_to_destination.append(p.get_id())
+                    # else, he needs to find walk searching for a bin
+                    else:
+                        p.set_true_trash()
+                        time_limit = p.get_max_time_of_carrying_trash()
+                        t = time_to_finish_consumption
+                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                        while time_limit > 0 and t < TIME_STEP and not found_a_bin:
+                            if p.walk(1):
+                                got_to_destination.append(p.get_id())
+                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                            time_limit -= 1
+                            t += 1
+                        if found_a_bin:
+                            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                        elif time_limit == 0:
+                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                            if found_a_bin:
+                                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                            else:
+                                self._trash_in_the_streets += p.get_trash_volume()
+                                not_cool_ppl.append(p.get_id())
                 else:
-                    time_limit = p.get_max_time_of_carrying_trash()
-                    t = time_to_finish_consumption
+                    time_limit = p.get_max_time_of_carrying_trash() - p.get_time_with_trash()
+                    t = 0
                     (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                     while time_limit > 0 and t < TIME_STEP and not found_a_bin:
                         if p.walk(1):
@@ -552,6 +591,7 @@ class Everything:
                         (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                         time_limit -= 1
                         t += 1
+                        p.increase_time_with_trash(1)
                     if found_a_bin:
                         self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
                     elif time_limit == 0:
@@ -559,12 +599,16 @@ class Everything:
                         if found_a_bin:
                             self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
                         else:
-                            self._trash_in_the_strets += p.get_trash_volume()
+                            self._trash_in_the_streets += p.get_trash_volume()
                             not_cool_ppl.append(p.get_id())
+
         for id in got_to_destination:
             self.remove_a_person(id)
         for id in not_cool_ppl:
             self.remove_a_person(id)
+
+    def get_trash_in_the_street(self):
+        return self._trash_in_the_streets
         
-
-
+    def get_bin(self, id: int) -> Bin:
+        return self._bins[self._id2index(self._bins_ids, id)]

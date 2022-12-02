@@ -633,3 +633,6 @@ class Everything:
         
     def get_bin(self, id: int) -> Bin:
         return self._bins[self._id2index(self._bins_ids, id)]
+
+    def get_bins_list(self) -> list[Bin]:
+        return self._bins

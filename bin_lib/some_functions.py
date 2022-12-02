@@ -237,7 +237,7 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int], eve
     """
     streets = mapa.get_streets_list()
     n_streets = len(streets)
-    n_com_points = rand.randrange(n_streets*3)
+    n_com_points = 2 + rand.randrange(n_streets*3)
     random_types = rand.choices((0,1,2), weights=weight_for_com_points, k=n_com_points)
     for i in range(n_com_points):
         # pick a type and generate random trash potential for the commertial point
@@ -326,18 +326,40 @@ def create_rand_bins(mapa: map.Map, everything: entities.Everything):
     streets = mapa.get_streets_list()
     n_streets = len(streets)
     n_bins = n_streets // 3 + rand.randrange(n_streets*2)
+
+    bins_pos_xy: list[tuple[float, float]] = []
     
-    for i in range(n_bins):
+    bin_capacity = 20
+    street = streets[rand.randrange(n_streets)]
+    rand_pos_street = map.Pos_Street(street, rand.random())
+    everything.new_bin(bin_capacity, rand_pos_street)
+    bins_pos_xy.append(rand_pos_street.get_pos_xy())
+    n = 1
+    tries = 0
+    while n < n_bins and tries < 3*n_bins:
         # generate random position
         street = streets[rand.randrange(n_streets)]
         rand_pos_street = map.Pos_Street(street, rand.random())
 
         # generate fixed / random bin capacity 
-        bin_capacity = 20
+        # bin_capacity = 20
         # bin_capacity = 50 * rand.random()
+        pos_xy = rand_pos_street.get_pos_xy()
+        # put bin in the vector if there is no one else too close
+        good = True
+        L = len(bins_pos_xy)
+        k = 0
+        while good and k < L:
+            if calculate_distance(bins_pos_xy[k], pos_xy) < 25:
+                good = False
+            k += 1
+        if good:
+            everything.new_bin(bin_capacity, rand_pos_street)
+            tries = -1
+            n += 1
+        tries += 1
 
-        # put bin in the vector
-        everything.new_bin(bin_capacity, rand_pos_street)
+            
 
 def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: int):
     """create random ppl using poisson for getting the number of ppl that will be generated

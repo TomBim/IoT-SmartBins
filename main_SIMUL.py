@@ -39,6 +39,10 @@ for sims in range(NUMBER_OF_SIMULATIONS):
         bin1 = np.append(bin1, everything.get_bin(1).get_vol_trash())
         bin2 = np.append(bin2, everything.get_bin(2).get_vol_trash())
 
+print(len(everything.get_bins_list()))
+print(everything._last_bins_id)
+print(len(everything.get_com_points()))
+
 plt.figure(figsize=(5,2.7), layout='constrained')
 plt.scatter(x,v,s=12, label='chao')
 plt.scatter(x,bin0,s=12, label='bin0')

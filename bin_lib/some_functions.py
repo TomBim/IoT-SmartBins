@@ -13,8 +13,8 @@ def search_in_vec_aux(vec: list, value: int, i_min: int, i_max: int) -> int:
         return i
     if i_min == i_max:
         if aux < value:
-            return i_min
-        return i_min-1
+            return i_min+1
+        return i_min
     if aux < value:
         return search_in_vec_aux(vec, value, i_min, i-1)
     return search_in_vec_aux(vec, value, i+1, i_max)
@@ -23,7 +23,7 @@ def search_in_vec(vec: list, value: int) -> int:
     """search a value in a vector and returns
     the index. The vector must be sorted already.
     If value isn't found, it will return the index 
-    of the last small id.
+    of the first greater id, so you can insert xD.
 
     Args:
         vec (list): vector in which we will make the search
@@ -215,7 +215,7 @@ def create_rand_streets(points: list[tuple[float]]) -> list[tuple[int]]:
     return s
 
 # TODO: see if these gaussians are good
-def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int]) -> list[entities.Commercial_Point]:
+def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int], everything: entities.Everything):
     """Generate random commercial points
 
     Args:
@@ -229,7 +229,6 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int]) -> 
         list[entities.Commercial_Point]: list of the randomly generated commercial points
     """
     streets = mapa.get_streets_list()
-    cp = []
     n_streets = len(streets)
     n_com_points = rand.randrange(n_streets*3)
     random_types = rand.choices((0,1,2), weights=weight_for_com_points, k=n_com_points)
@@ -266,9 +265,8 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int]) -> 
 
         # put in the vector
         customer_potential = rand.random()
-        cp.append(entities.Commercial_Point(random_types_i,customer_potential,trash_pot,rand_pos_street))   
 
-    return cp
+        everything.new_com_point(random_types_i,customer_potential,trash_pot,rand_pos_street)
  
 def generate_random_map(n_points: int, max_range: float, file_intersections: str, file_streets: str, weight_for_com_points: tuple[int], file_com_points: str):
     """generates the files of random intersections, streets, and commertial points
@@ -309,7 +307,27 @@ def generate_random_map(n_points: int, max_range: float, file_intersections: str
     mat.write("]")
     mat.close()
 
-def generate_a_person(mapa: map.Map, com_points: list[entities.Commercial_Point], id: int) -> entities.Person:
-    n_com_points = len(com_points)
-    origin = rand.randrange()
-    entities.Person(id, )
+def create_rand_bins(mapa: map.Map, everything: entities.Everything):
+    """Generate random bin locations
+
+    Args:
+        mapa (map.Map): map
+
+    Returns:
+        list[entities.Bin]: list of the randomly generated bins
+    """
+    streets = mapa.get_streets_list()
+    n_streets = len(streets)
+    n_bins = rand.randrange(n_streets*3)
+    
+    for i in range(n_bins):
+        # generate random position
+        street = streets[rand.randrange(n_streets)]
+        rand_pos_street = map.Pos_Street(street, rand.random())
+
+        # generate fixed / random bin capacity 
+        bin_capacity = 20
+        # bin_capacity = 50 * rand.random()
+
+        # put bin in the vector
+        everything.new_bin(bin_capacity, rand_pos_street)

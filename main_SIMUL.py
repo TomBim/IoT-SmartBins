@@ -19,7 +19,7 @@ fcs.plot_entities(com_points)
 
 NUMBER_OF_STEPS = TIME_OF_SIMULATION / TIME_STEP
 
-for s in range(NUMBER_OF_SIMULATIONS)
+for sims in range(NUMBER_OF_SIMULATIONS)
     # generate number of people
-    
+    n_ppl = rand.random()
     for t in range(NUMBER_OF_STEPS)

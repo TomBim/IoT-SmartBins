@@ -27,36 +27,38 @@ class Entity:
 
 class Person(Entity):
     """Private variables
-        id: int
-        pos: float[2]
-        destination: Comertial_
+        id(int)
+        pos_street (Pos_Street)
+        destination_street (Pos_Street): 
+        destination (Commertial_Point)
         path: list(Intersection)
-        fov: float
-        max_distance_carrying_trash: float
+        fov (float): vision distance
+        max_time_carrying_trash: float
         time_of_consumption: int (seconds)
         speed: float (m/s)
         has_trash: bool
             if consuming something, it's false
         time_alive: int (seconds)
-        distance_carrying_trash: float
+        time_carrying_trash: float
 
     """
 
 
-    def __init__(self, id: int, origin_street: map.Pos_Street, destination_street: map.Pos_Street, map_: map.Map, *args):
+    def __init__(self, id: int, origin: Commercial_Point, destination: Commercial_Point, map_: map.Map, payload: dict,*args):
         self._id = id
-        self._pos_street = origin_street
-        self._origin_street = origin_street
-        self._destination_street = destination_street
+        self._origin = origin
+        self._origin_street = origin.get_pos_street()
+        self._destination = destination
+        self._destination_street = destination.get_pos_street()
         self._map_ = map_
         self._path = self._path_planner()
-        self._fov=None
-        self._max_distance_carrying_trash=None
-        self._time_of_consumption=None
-        self._speed: float=None
-        self._has_trash=False    
-        self._time_alive=None
-        self._distance_carrying_trash=None
+        self._fov: float= payload.get("fov")
+        self._max_time_carrying_trash: int = payload.get("max_time_carrying_trash")
+        self._time_of_consumption: int = payload.get("time_of_consumption")
+        self._has_trash: bool = (self._time_of_consumption == 0)
+        self._speed: float = payload.get("speed")
+        self._time_alive = 0
+        self._time_carrying_trash = 0
         self._distance_to_destination = self._calculate_distance_to_destination()
 
     def _path_planner(self) -> list[map.Intersection]:
@@ -221,10 +223,6 @@ class Person(Entity):
         self._pos_street = map.Pos_Street(self._pos_street.get_street, new_pos_in_street)
         return FALSE
 
-                
-
-
-
 class Bin(Entity):
     """Private variables:
         id: int
@@ -367,6 +365,10 @@ class Commercial_Point(Entity):
         self._trash_generation_potential = trash_generation_potential
         self._pos_street = pos_street
         self._id = -1
+        self._attractiveness = rand.random() + 1e-6 #cant be zero
+
+    def get_attractiveness(self) -> float:
+        return self._attractiveness
 
     def get_type(self) -> int:
         return self._type
@@ -384,8 +386,7 @@ class Commercial_Point(Entity):
         """
         return self._trash_generation_potential.generate_trash()
 
-
-class Entities:
+class Everything:
     def __init__(self) -> None:
         self._ppl: list[Person] = []
         self._com_points: list[Commercial_Point] = []
@@ -398,18 +399,85 @@ class Entities:
         self._n_people = 0
         self._n_com_points = 0
         self._n_bins = 0
+        self._last_persons_id = -1
+        self._last_bins_id = -1
+        self._com_points_attractiveness = np.array([])
     
-    def new_person(self, p: Person)
-        self._ppl.append(p)
-        self._ppl_ids.append(p.get_id)
+    def new_person(self, payload: dict=None):
+        if payload.get("fov") == None
+            auxfov = abs(rand.gauss(mu=8, sigma=2))
+            payload["fov"] = auxfov # between 3 and 13 meters
+            aux = rand.gauss(mu=32*auxfov/8, sigma=18)
+            if aux < 0:
+                payload["max_time_carrying_trash"] = 0
+            else:
+                payload["max_time_carrying_trash"] = rand.gauss(mu=38, sigma=18)
+        if payload.get("speed") == None
+            payload["speed"] = abs(rand.gauss(mu = 1.25, sigma = .25))
+        origin = rand.choices(range(self._food_points+self._nfood_points), self._com_points_attractiveness[0:(self._food_points + self._nfood_points - 1)])
+        destination = rand.choices(range(self._food_points+self._nfood_points+self._job_points), weights=self._com_points_attractiveness)
+        while destination == origin:
+            destination = rand.choices(range(self._food_points+self._nfood_points+self._job_points), weights=self._com_points_attractiveness)
+        payload["origin"] = self._com_points[origin]
+        payload["destination"] = self._com_points[destination]        
+
+        id = self._next_unused_person_id()
+        p = Person(id, payload["origin"], payload["desination"], mapa, payload)
+        index = self._id2index(self._bins_ids, id)
+        self._ppl.insert(index, p)
+        self._ppl_ids.insert(index, id)
+        self._last_persons_id += 1
+
+    def _next_unused_person_id(self):
+        if self._last_persons_id > 1e9:
+            self._last_persons_id = -1
+            return 0
+        return self._last_persons_id + 1
+
+    def _next_unused_bin_id(self):
+        if self._last_bins_id > 1e9:
+            self._last_bins_id = -1
+            return 0
+        return self._last_bins_id + 1
 
     def _id2index(self, id_vec: list[int], id: int):
         return fcts.search_in_vec(id_vec, id)
 
+    def remove_a_person(self, id: int):
+        index = self._id2index(self._ppl_ids, id)
+        self._ppl.pop(index)
+        self._ppl_ids.pop(index)
+
     def move_bin(self, id_bin: int, new_pos_street: map.Pos_Street):
-        self._bins[id_bin].move_to(new_pos_street)
+        index = self._id2index(self._bins_ids, id_bin)
+        self._bins[index].move_to(new_pos_street)
+
+    def remove_bin(self, id_bin: int):
+        index = self._id2index(self._bins_ids, id_bin)
+        self._bins[index].pop(index)
+        self._bins_ids[index].pop(index)
+    
+    def new_bin(self, capacity, pos_street: map.Pos_Street):
+        id = self._next_unused_bin_id()
+        index = self._id2index(self._bins_ids, id)
+        self._bins_ids.insert(index, id)
+        self._bins.insert(index, Bin(id, pos_street, capacity))
 
     def make_a_person_walk(self, id_person: int, time_of_walk: int):
         p = self._ppl[fcts.search_in_vec(self._ppl_ids, id_person)]
-        path = p.get_path()
-        pos = p.get_pos_street()
+        p.walk(time_of_walk)
+
+    def new_com_point(self, type: int, customer_potential: float, trash_generation_potential: Trash_Potential, pos_street: map.Pos_Street):
+        c = Commercial_Point(type, customer_potential, trash_generation_potential, pos_street)
+        if type == 0:
+            self._com_points.insert(self._food_points, c)
+            self._com_points_attractiveness = np.insert(self._com_points_attractiveness, self._food_points, c.get_attractiveness())
+            self._food_points += 1
+        elif type == 1:
+            self._com_points.insert(self._food_points+self._nfood_points, c)
+            self._com_points_attractiveness = np.insert(self._com_points_attractiveness, self._food_points+self._nfood_points, c.get_attractiveness())
+            self._nfood_points += 1
+        else:
+            self._job_points += 1
+            self._com_points.append(c)
+            self._com_points_attractiveness = np.append(self._com_points_attractiveness, c.get_attractiveness())

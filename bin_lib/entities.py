@@ -646,6 +646,8 @@ class Everything:
             p = self._ppl[i-n_pops]
             if self._update_a_person(p, TIME_STEP):
                 self._ppl.pop(i-n_pops)
+                self._ppl_ids.pop(i-n_pops)
+                self._n_people -= 1
                 n_pops += 1
         
     def get_trash_in_the_street(self):

@@ -438,6 +438,7 @@ class Everything:
         self._com_points_attractiveness = np.array([])
         self._trash_in_the_streets = 0
         self._map = mapa
+        self._pos_trash_floor = []
     
     def new_person(self):
         origin = rand.choices(range(self._food_points+self._nfood_points), self._com_points_attractiveness[0:(self._food_points + self._nfood_points)])
@@ -603,6 +604,7 @@ class Everything:
                     self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
                 else:
                     self._trash_in_the_streets += p.get_trash_volume()
+                    self._pos_trash_floor.append(p.get_pos_xy())
                 return True
             # else, t == TIME_STEP
             return False
@@ -634,6 +636,7 @@ class Everything:
                 self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
             else:
                 self._trash_in_the_streets += p.get_trash_volume()
+                self._pos_trash_floor.append(p.get_pos_xy())
             return True
         
         # he's with trash, but didn't lose all patience and time is gone

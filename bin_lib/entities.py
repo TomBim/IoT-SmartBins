@@ -146,7 +146,7 @@ class Person(Entity):
         start = self._pos_street.get_pos_xy()
 
         # he arrives?
-        if d < self._distance_to_destination:
+        if d > self._distance_to_destination:
             self._pos_street = self._destination_street
             return TRUE
 
@@ -222,6 +222,9 @@ class Person(Entity):
             new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)
         self._pos_street = map.Pos_Street(self._pos_street.get_street, new_pos_in_street)
         return FALSE
+
+    def get_fov(self):
+        return self._fov
 
 class Bin(Entity):
     """Private variables:
@@ -487,3 +490,20 @@ class Everything:
 
     def get_com_points_attractiveness(self):
         return self._com_points_attractiveness
+
+    def check_for_nearby_bins(self, id_person: int) -> (bool, int): 
+        """
+        This function checks if there is any bin closer than their fov
+        If there is a bin nearby, it should return TRUE 
+        Else, it should return FALSE
+        """
+        p = self._ppl[fcts.search_in_vec(self._ppl_ids, id_person)]
+        fov = p.get_fov()
+
+        for b in _bins:
+            dist_to_bin = Person._calculate_distance(p.get_pos_xy(), b.get_pos_xy())
+            
+            if dist_to_bin < fov:
+                return (True, b.get_id())
+        
+        return (False, -1)

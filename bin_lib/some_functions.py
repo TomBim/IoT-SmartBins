@@ -331,3 +331,24 @@ def create_rand_bins(mapa: map.Map, everything: entities.Everything):
 
         # put bin in the vector
         everything.new_bin(bin_capacity, rand_pos_street)
+
+def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: int):
+    """create random ppl using poisson for getting the number of ppl that will be generated
+    Obs:
+        Should be called every step
+
+    Args:
+        mapa (map.Map): _description_
+        everything (entities.Everything): _description_
+        TIME_STEP (int): constant
+    """
+    attractiveness_of_com_points = everything.get_com_points_attractiveness()
+    n_com_points = len(attractiveness_of_com_points)
+
+    # lambda for poisson: depends on number of com. points and their attractiveness
+    lambida = m.exp(n_com_points * attractiveness_of_com_points.mean()) / 1800 * TIME_STEP
+    n_ppl = np.random.poisson(lambida)
+
+    # create these ppl
+    for i in range(n_ppl):
+        everything.new_person()

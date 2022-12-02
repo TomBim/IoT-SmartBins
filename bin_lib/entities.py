@@ -481,3 +481,9 @@ class Everything:
             self._job_points += 1
             self._com_points.append(c)
             self._com_points_attractiveness = np.append(self._com_points_attractiveness, c.get_attractiveness())
+
+    def get_com_points(self):
+        return self._com_points
+
+    def get_com_points_attractiveness(self):
+        return self._com_points_attractiveness

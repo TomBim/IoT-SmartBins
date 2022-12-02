@@ -1,10 +1,15 @@
+from __future__ import annotations
 import random as rand
 import numpy as np
 import math as m
+from math import sqrt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
+
+def calculate_distance(point1: tuple[float, float], point2: tuple[float, float]) -> float:
+    return sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
 def search_in_vec_aux(vec: list, value: int, i_min: int, i_max: int) -> int:
     i = int((i_max + i_min) / 2)
@@ -15,9 +20,9 @@ def search_in_vec_aux(vec: list, value: int, i_min: int, i_max: int) -> int:
         if aux < value:
             return i_min+1
         return i_min
-    if aux < value:
-        return search_in_vec_aux(vec, value, i_min, i-1)
-    return search_in_vec_aux(vec, value, i+1, i_max)
+    if value > aux:
+        return search_in_vec_aux(vec, value, i+1, i_max)
+    return search_in_vec_aux(vec, value, i_min, i)
 
 def search_in_vec(vec: list, value: int) -> int:
     """search a value in a vector and returns
@@ -32,7 +37,9 @@ def search_in_vec(vec: list, value: int) -> int:
     Returns:
         int: index of the value searched
     """
-    return search_in_vec_aux(vec, value, 0, len(vec))
+    if len(vec) == 0:
+        return 0
+    return search_in_vec_aux(vec, value, 0, len(vec)-1)
 
 def plot_map(mapa: map.Map) -> None:
     plt.figure(figsize=(5,2.7), layout='constrained')
@@ -346,7 +353,7 @@ def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: i
     n_com_points = len(attractiveness_of_com_points)
 
     # lambda for poisson: depends on number of com. points and their attractiveness
-    lambida = m.exp(n_com_points * attractiveness_of_com_points.mean()) / 1800 * TIME_STEP
+    lambida = 1.03**(n_com_points * attractiveness_of_com_points.mean()) / 1800 * TIME_STEP
     n_ppl = np.random.poisson(lambida)
 
     # create these ppl

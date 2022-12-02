@@ -23,7 +23,7 @@ class Intersection:
 
     def add_neighbor(self, neighbor: Intersection, distance: float = None) -> None:
         self._neighbors.append(neighbor)
-        self._dist_to_neighbors = distance if distance != None else self._calculate_distance_to_neighbor(neighbor)
+        self._dist_to_neighbors.append(distance if distance != None else self._calculate_distance_to_neighbor(neighbor))
 
     def get_neighbors(self) -> list[Intersection]:
         return self._neighbors.copy()
@@ -84,7 +84,7 @@ class Map:
         if A == B:
             return None
         for s in self._streets:
-            (a,b) = s.get_intersctions_ids
+            (a,b) = s.get_intersctions_ids()
             if (a == A or a == B) and (b == A or b == B):
                 return s
         return None
@@ -107,7 +107,7 @@ class Pos_Street:
     def __init__(self, street: Street, pos_in_street: float):
         self._street: Street = street
         self._pos_in_street: float = pos_in_street
-        A, B = street.get_vector()
+        (A, B) = street.get_vector()
         A = A.get_pos()
         B = B.get_pos()
         x = A[0]*(1-pos_in_street) + B[0]*pos_in_street
@@ -118,7 +118,7 @@ class Pos_Street:
         return self._street
 
     def get_pos_in_street(self) -> float:
-        return self._pos_in_stree
+        return self._pos_in_street
 
     def get_pos_xy(self) -> tuple[float, float]:
         return self._pos_xy

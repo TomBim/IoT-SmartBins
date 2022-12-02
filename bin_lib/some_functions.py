@@ -325,7 +325,7 @@ def create_rand_bins(mapa: map.Map, everything: entities.Everything):
     """
     streets = mapa.get_streets_list()
     n_streets = len(streets)
-    n_bins = n_streets // 3 + rand.randrange(n_streets*3)
+    n_bins = n_streets // 3 + rand.randrange(n_streets*2)
     
     for i in range(n_bins):
         # generate random position

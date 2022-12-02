@@ -249,6 +249,9 @@ class Person(Entity):
     def get_time_with_trash(self) -> int:
         return self._time_carrying_trash
 
+    def get_speed(self) -> float:
+        return self._speed
+
 class Bin(Entity):
     """Private variables:
         id: int
@@ -482,9 +485,10 @@ class Everything:
         return fcts.search_in_vec(id_vec, id)
 
     def remove_a_person(self, id: int):
-        index = self._id2index(self._ppl_ids, id)
-        self._ppl.pop(index)
-        self._ppl_ids.pop(index)
+        if len(self._ppl) != 0:
+            index = self._id2index(self._ppl_ids, id)
+            self._ppl.pop(index)
+            self._ppl_ids.pop(index)
 
     def move_bin(self, id_bin: int, new_pos_street: map.Pos_Street):
         index = self._id2index(self._bins_ids, id_bin)
@@ -546,65 +550,82 @@ class Everything:
         return (False, -1)
 
     def update_people(self, TIME_STEP: int):
-        got_to_destination: list[int] = []
-        not_cool_ppl: list[int] = []
+        ppl_to_pop: list[int] = []
         for p in self._ppl:
             time_to_finish_consumption = p.get_time_to_finish_consumption()
             # if he won't need a bin in this step
             if time_to_finish_consumption > TIME_STEP:
                 # if he gets to destination
                 if p.walk(TIME_STEP):
-                    got_to_destination.append(p.get_id())
+                    ppl_to_pop.append(p.get_id())
             else:
+                step = int(1.5 * p.get_fov() / p.get_speed())
                 if not p.has_trash():
                     # if he gets to destination before needing a bin
                     if p.walk(time_to_finish_consumption):
-                        got_to_destination.append(p.get_id())
+                        ppl_to_pop.append(p.get_id())
                     # else, he needs to find walk searching for a bin
                     else:
                         p.set_true_trash()
                         time_limit = p.get_max_time_of_carrying_trash()
                         t = time_to_finish_consumption
                         (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                        while time_limit > 0 and t < TIME_STEP and not found_a_bin:
+                        while (time_limit - step >= 0) and (t + step <= TIME_STEP) and not found_a_bin:
+                            if p.walk(step):
+                                ppl_to_pop.append(p.get_id())
+                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                            time_limit -= step
+                            t += step
+                            p.increase_time_with_trash(step)
+                        while (time_limit > 0) and (t < TIME_STEP) and not found_a_bin:
                             if p.walk(1):
-                                got_to_destination.append(p.get_id())
+                                ppl_to_pop.append(p.get_id())
                             (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                             time_limit -= 1
                             t += 1
+                            p.increase_time_with_trash(1)
                         if found_a_bin:
                             self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                            ppl_to_pop.append(p.get_id())                            
                         elif time_limit == 0:
                             (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                             if found_a_bin:
                                 self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                                ppl_to_pop.append(p.get_id())
                             else:
                                 self._trash_in_the_streets += p.get_trash_volume()
-                                not_cool_ppl.append(p.get_id())
+                                ppl_to_pop.append(p.get_id())
                 else:
                     time_limit = p.get_max_time_of_carrying_trash() - p.get_time_with_trash()
                     t = 0
                     (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                    while (time_limit - step  >= 0) and (t + step < TIME_STEP) and not found_a_bin:
+                        if p.walk(step):
+                            ppl_to_pop.append(p.get_id())
+                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
+                        time_limit -= step
+                        t += step
+                        p.increase_time_with_trash(step)
                     while time_limit > 0 and t < TIME_STEP and not found_a_bin:
                         if p.walk(1):
-                            got_to_destination.append(p.get_id())
+                            ppl_to_pop.append(p.get_id())
                         (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                         time_limit -= 1
                         t += 1
                         p.increase_time_with_trash(1)
                     if found_a_bin:
                         self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                        ppl_to_pop.append(p.get_id())
                     elif time_limit == 0:
                         (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
                         if found_a_bin:
                             self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                            ppl_to_pop.append(p.get_id())
                         else:
                             self._trash_in_the_streets += p.get_trash_volume()
-                            not_cool_ppl.append(p.get_id())
+                            ppl_to_pop.append(p.get_id())
 
-        for id in got_to_destination:
-            self.remove_a_person(id)
-        for id in not_cool_ppl:
+        for id in ppl_to_pop:
             self.remove_a_person(id)
 
     def get_trash_in_the_street(self):

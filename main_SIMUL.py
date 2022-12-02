@@ -6,7 +6,7 @@ import bin_lib.some_functions as fcs
 import numpy as np
 
 NUMBER_OF_SIMULATIONS = 1
-TIME_OF_SIMULATION = 3600*365*5
+TIME_OF_SIMULATION = 3600*24
 TIME_STEP = 60
 FILE_INTERSECTIONS = "bin_lib/intersections.txt"
 FILE_STRETS = "bin_lib/streets.txt"
@@ -24,18 +24,27 @@ fcs.create_rand_bins(mapa, everything)
 
 NUMBER_OF_STEPS = TIME_OF_SIMULATION // TIME_STEP
 
+x = np.array([])
 v = np.array([])
 bin0 = np.array([])
+bin1 = np.array([])
+bin2 = np.array([])
 for sims in range(NUMBER_OF_SIMULATIONS):
     for t in range(NUMBER_OF_STEPS):
         everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(mapa, everything, TIME_STEP)
+        x = np.append(x, t*60)
         v = np.append(v, everything.get_trash_in_the_street())
         bin0 = np.append(bin0, everything.get_bin(0).get_vol_trash())
+        bin1 = np.append(bin1, everything.get_bin(1).get_vol_trash())
+        bin2 = np.append(bin2, everything.get_bin(2).get_vol_trash())
 
 plt.figure(figsize=(5,2.7), layout='constrained')
-plt.plot(range(NUMBER_OF_STEPS),v)
-plt.plot(range(NUMBER_OF_STEPS),bin0)
+plt.scatter(x,v,s=12, label='chao')
+plt.scatter(x,bin0,s=12, label='bin0')
+plt.scatter(x,bin1,s=12, label='bin1')
+plt.scatter(x,bin2,s=12, label='bin2')
+plt.legend()
 plt.grid(visible=True)
 plt.show()
 

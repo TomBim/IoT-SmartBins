@@ -1,4 +1,5 @@
 import pygame
+import random
 
 from settings import *
 from default_button import Default_Button
@@ -72,6 +73,7 @@ class Simulation_Page:
         for cp in self.everything._com_points:
             Ax = (cp.get_pos_xy()[0]) * PROPORTION
             Ay = (cp.get_pos_xy()[1]) * PROPORTION
+            cp.get_pos_street()
             pygame.draw.circle(screen, DARK_GRAY, (Ax, Ay), comm_radius)
 
 
@@ -93,6 +95,12 @@ class Simulation_Page:
         draw_health_bar(surf, health_rect.topleft, health_rect.size, 
                 (0, 0, 0), (255, 0, 0), (0, 255, 0), percentage)
 
+    def draw_trash(self, screen):
+        trash_radius = 2
+        for t in self.everything._pos_trash_floor:
+            Ax = (t[0]) * PROPORTION - 5 + 10*random.random()
+            Ay = (t[1]) * PROPORTION - 5 + 10*random.random()
+            pygame.draw.circle(screen, BLACK, (Ax, Ay), trash_radius)
 
     def draw_people(self, screen):
         people_radius = 2
@@ -101,6 +109,13 @@ class Simulation_Page:
             Ay = (p.get_pos_xy()[1]) * PROPORTION
             pygame.draw.circle(screen, BLUE, (Ax, Ay), people_radius)
             pygame.draw.circle(screen, BLUE, (Ax, Ay), p.get_fov() * PROPORTION, 2)
+
+    
+    def draw_trash_counter(self, screen):
+        value = self.everything._trash_in_the_streets
+        value = f'{value:.2f} L'
+        screen.blit(DEFAULT_FONT.render(str(value), True, BLACK), (WIDTH-100, 50))
+
             
             
     def update(self):
@@ -112,7 +127,9 @@ class Simulation_Page:
         
         self.draw_comm_point(self.screen)
         self.draw_bins(self.screen)
+        self.draw_trash(self.screen)
         self.draw_people(self.screen)
+        self.draw_trash_counter(self.screen)
 
         self.everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)

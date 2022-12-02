@@ -469,6 +469,7 @@ class Everything:
             self._ppl.insert(index, p)
             self._ppl_ids.insert(index, id)
             self._last_persons_id += 1
+            self._n_people += 1
 
     def _next_unused_person_id(self):
         if self._last_persons_id > 1e9:
@@ -490,6 +491,7 @@ class Everything:
             index = self._id2index(self._ppl_ids, id)
             self._ppl.pop(index)
             self._ppl_ids.pop(index)
+            self._n_people -= 1
 
     def move_bin(self, id_bin: int, new_pos_street: map.Pos_Street):
         index = self._id2index(self._bins_ids, id_bin)
@@ -533,13 +535,12 @@ class Everything:
     def get_com_points_attractiveness(self):
         return self._com_points_attractiveness
 
-    def check_for_nearby_bins(self, id_person: int) -> tuple[bool, int]: 
+    def check_for_nearby_bins(self, p: Person) -> tuple[bool, int]: 
         """
         This function checks if there is any bin closer than their fov
         If there is a bin nearby, it should return True 
         Else, it should return False
         """
-        p = self._ppl[fcts.search_in_vec(self._ppl_ids, id_person)]
         fov = p.get_fov()
 
         for b in self._bins:
@@ -550,85 +551,103 @@ class Everything:
 
         return (False, -1)
 
-    def update_people(self, TIME_STEP: int):
-        ppl_to_pop: list[int] = []
-        for p in self._ppl:
+    def _update_a_person(self, p: Person, TIME_STEP: int) -> bool:
+        """
+
+        Args:
+            person (Person): _description_
+            TIME_STEP (int): _description_
+
+        Returns:
+            bool: pop?
+        """
+        step = int(1.5 * p.get_fov() / p.get_speed())
+        # if he didn't finish his comsumption
+        if not p.has_trash():
             time_to_finish_consumption = p.get_time_to_finish_consumption()
             # if he won't need a bin in this step
             if time_to_finish_consumption > TIME_STEP:
                 # if he gets to destination
-                if p.walk(TIME_STEP):
-                    ppl_to_pop.append(p.get_id())
-            else:
-                step = int(1.5 * p.get_fov() / p.get_speed())
-                if not p.has_trash():
-                    # if he gets to destination before needing a bin
-                    if p.walk(time_to_finish_consumption):
-                        ppl_to_pop.append(p.get_id())
-                    # else, he needs to find walk searching for a bin
-                    else:
-                        p.set_true_trash()
-                        time_limit = p.get_max_time_of_carrying_trash()
-                        t = time_to_finish_consumption
-                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                        while (time_limit - step >= 0) and (t + step <= TIME_STEP) and not found_a_bin:
-                            if p.walk(step):
-                                ppl_to_pop.append(p.get_id())
-                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                            time_limit -= step
-                            t += step
-                            p.increase_time_with_trash(step)
-                        while (time_limit > 0) and (t < TIME_STEP) and not found_a_bin:
-                            if p.walk(1):
-                                ppl_to_pop.append(p.get_id())
-                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                            time_limit -= 1
-                            t += 1
-                            p.increase_time_with_trash(1)
-                        if found_a_bin:
-                            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
-                            ppl_to_pop.append(p.get_id())                            
-                        elif time_limit == 0:
-                            (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                            if found_a_bin:
-                                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
-                                ppl_to_pop.append(p.get_id())
-                            else:
-                                self._trash_in_the_streets += p.get_trash_volume()
-                                ppl_to_pop.append(p.get_id())
+                return p.walk(TIME_STEP)
+        
+            # make him walk while finish his consuption
+            
+            # if he gets to destination before needing a bin
+            if p.walk(time_to_finish_consumption):
+                return True
+            # else, he needs to start walk while search for a bin
+            p.set_true_trash()
+            time_limit = p.get_max_time_of_carrying_trash()
+            t = time_to_finish_consumption
+            (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+            while (time_limit - step >= 0) and (t + step <= TIME_STEP) and not found_a_bin:
+                if p.walk(step):
+                    return True
+                (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+                time_limit -= step
+                t += step
+                p.increase_time_with_trash(step)
+            while (time_limit > 0) and (t < TIME_STEP) and not found_a_bin:
+                if p.walk(1):
+                    return True
+                (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+                time_limit -= 1
+                t += 1
+                p.increase_time_with_trash(1)
+            if found_a_bin:
+                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                return True
+            if time_limit == 0:
+                (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+                if found_a_bin:
+                    self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
                 else:
-                    time_limit = p.get_max_time_of_carrying_trash() - p.get_time_with_trash()
-                    t = 0
-                    (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                    while (time_limit - step  >= 0) and (t + step < TIME_STEP) and not found_a_bin:
-                        if p.walk(step):
-                            ppl_to_pop.append(p.get_id())
-                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                        time_limit -= step
-                        t += step
-                        p.increase_time_with_trash(step)
-                    while time_limit > 0 and t < TIME_STEP and not found_a_bin:
-                        if p.walk(1):
-                            ppl_to_pop.append(p.get_id())
-                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                        time_limit -= 1
-                        t += 1
-                        p.increase_time_with_trash(1)
-                    if found_a_bin:
-                        self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
-                        ppl_to_pop.append(p.get_id())
-                    elif time_limit == 0:
-                        (found_a_bin, bin_id) = self.check_for_nearby_bins(p.get_id())
-                        if found_a_bin:
-                            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
-                            ppl_to_pop.append(p.get_id())
-                        else:
-                            self._trash_in_the_streets += p.get_trash_volume()
-                            ppl_to_pop.append(p.get_id())
+                    self._trash_in_the_streets += p.get_trash_volume()
+                return True
+            # else, t == TIME_STEP
+            return False
+        
+        # finished his consumption already, before starting this
+        time_limit = p.get_max_time_of_carrying_trash() - p.get_time_with_trash()
+        t = 0
+        (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+        while (time_limit - step  >= 0) and (t + step < TIME_STEP) and not found_a_bin:
+            if p.walk(step):
+                return True
+            (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+            time_limit -= step
+            t += step
+            p.increase_time_with_trash(step)
+        while time_limit > 0 and t < TIME_STEP and not found_a_bin:
+            if p.walk(1):
+                return True
+            (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+            time_limit -= 1
+            t += 1
+            p.increase_time_with_trash(1)
+        if found_a_bin:
+            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+            return True
+        if time_limit == 0:
+            (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
+            if found_a_bin:
+                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+            else:
+                self._trash_in_the_streets += p.get_trash_volume()
+            return True
+        
+        # he's with trash, but didn't lose all patience and time is gone
+        return False
+    
 
-        for id in ppl_to_pop:
-            self.remove_a_person(id)
-
+    def update_people(self, TIME_STEP: int):
+        n_pops = 0
+        for i in range(len(self._ppl)):
+            p = self._ppl[i-n_pops]
+            if self._update_a_person(p, TIME_STEP):
+                self._ppl.pop(i-n_pops)
+                n_pops += 1
+        
     def get_trash_in_the_street(self):
         return self._trash_in_the_streets
         

@@ -350,16 +350,15 @@ def create_rand_bins(mapa: map.Map, everything: entities.Everything):
         L = len(bins_pos_xy)
         k = 0
         while good and k < L:
-            if calculate_distance(bins_pos_xy[k], pos_xy) < 25:
+            if calculate_distance(bins_pos_xy[k], pos_xy) < 50:
                 good = False
             k += 1
         if good:
             everything.new_bin(bin_capacity, rand_pos_street)
             tries = -1
             n += 1
+            bins_pos_xy.append(pos_xy)
         tries += 1
-
-            
 
 def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: int):
     """create random ppl using poisson for getting the number of ppl that will be generated

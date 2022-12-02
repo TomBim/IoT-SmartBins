@@ -6,7 +6,7 @@ import bin_lib.some_functions as fcs
 import numpy as np
 
 NUMBER_OF_SIMULATIONS = 1
-TIME_OF_SIMULATION = 3600*24
+TIME_OF_SIMULATION = 3600*24*30
 TIME_STEP = 60
 FILE_INTERSECTIONS = "bin_lib/intersections.txt"
 FILE_STRETS = "bin_lib/streets.txt"

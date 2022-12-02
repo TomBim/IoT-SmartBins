@@ -162,6 +162,7 @@ class Person(Entity):
 
         n_intersections = len(self._path)
         self._time_alive += time_walking
+        self._distance_to_destination -= d
 
         # he is already on the destination's street?
         if n_intersections == 0:
@@ -171,9 +172,9 @@ class Person(Entity):
             (Bx, By) = B.get_pos()
             if Ax != Bx: #se nao é reta vertical
                 m = (self._destination_street.get_pos_xy()[0] - start[0])*(Bx-Ax)
-                if m > 0: #apontam para o mesmo lugar
+                if m > 0: # apontam no mesmo sentido
                     new_pos_in_street = self._pos_street.get_pos_in_street() + d / self._pos_street.get_street().get_length()
-                else:#se apontam em sentidos opostos
+                else: # se apontam em sentidos opostos
                     new_pos_in_street = self._pos_street.get_pos_in_street() - d / self._pos_street.get_street().get_length()
             else: #se for vertical
                 new_pos_in_street = self._pos_street.get_pos_in_street() + d / (By - Ay)

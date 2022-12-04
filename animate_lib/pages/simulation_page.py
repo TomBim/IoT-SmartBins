@@ -44,6 +44,8 @@ class Simulation_Page:
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
 
+        self.ppls_font = pygame.font.SysFont('Comic Sans MS', 16)
+
         self.buttons = [
             Default_Button(screen, 50, 50 , 40, 40, DEFAULT_FONT, "x", (150, 150, 150), lambda: change_screen("menu_page")),
         ]
@@ -101,6 +103,8 @@ class Simulation_Page:
             Ay = (p.get_pos_xy()[1]) * PROPORTION
             pygame.draw.circle(screen, BLUE, (Ax, Ay), people_radius)
             pygame.draw.circle(screen, BLUE, (Ax, Ay), p.get_fov() * PROPORTION, 2)
+            text = self.ppls_font.render(f'{p.get_id()}', False, BLUE)
+            self.screen.blit(text, (Ax,Ay))
             
             
     def update(self):

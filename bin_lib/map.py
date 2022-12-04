@@ -1,6 +1,9 @@
 from __future__ import annotations
 from math import sqrt
 import numpy as np
+import bin_lib.some_functions as fcs
+
+EPSILON = 1e-3
 
 class Intersection:
     def __init__(self, id: int, x: float, y: float):
@@ -41,7 +44,7 @@ class Street:
         B.add_neighbor(A, self._length)
         self._intersctions_ids = (A.get_id(), B.get_id())
 
-    def get_vector(self) -> tuple[Intersection]:
+    def get_vector(self) -> tuple[Intersection, Intersection]:
         return self._vec
 
     def get_length(self) -> float:
@@ -164,3 +167,83 @@ def read_map(file_intersections: str, file_streets: str, file_commertial_points:
     f.close()
 
     return mapa
+
+def validate_a_map(mapa: Map) -> bool:
+    intersections = mapa.get_intersections_list()
+    streets = mapa.get_streets_list()
+
+    # see if streets cross one another
+    # and if neighbours are good
+    Ls = len(streets)
+    for i in range(Ls):
+        (A0, B0) = streets[i].get_vector()
+        good = False
+        for possible_b0 in A0.get_neighbors():
+            if possible_b0.get_id() == B0.get_id():
+                good = True
+        if not good:
+            print("problem with neighbours")
+            return False
+        good = False
+        for possible_a0 in B0.get_neighbors():
+            if possible_a0.get_id() == A0.get_id():
+                good = True
+        if not good:
+            print("problem with neighbours")
+            return False
+
+        A0 = A0.get_pos()
+        B0 = B0.get_pos()
+        (A0x,A0y) = A0
+        (B0x,B0y) = B0
+        (m0,n0,r0) = fcs.calculate_line_equation(A0,B0)
+        for k in range(i+1, Ls):
+            (A, B) = streets[k].get_vector()
+            A = A.get_pos()
+            B = B.get_pos()
+            (Ax,Ay) = A
+            (Bx,By) = B
+            
+            # how many common intersections in common:
+            # 0 -> idk
+            # 1 -> has no problem
+            # 2 -> same street -> problem
+            A0_A = fcs.calculate_distance(A0,A)
+            B0_A = fcs.calculate_distance(B0,A)
+            A0_B = fcs.calculate_distance(A0,B)
+            B0_B = fcs.calculate_distance(B0,B)
+            # 2 in common
+            if abs(A0_A * A0_B) < EPSILON and abs(B0_A * B0_B) < EPSILON:
+                return False
+            # 0 in common
+            if abs(A0_A * A0_B) > EPSILON and abs(B0_A * B0_B) > EPSILON:
+                (m,n,r) = fcs.calculate_line_equation(A,B)
+                A0_in_mnr = m*A0x + n*A0y - r
+                B0_in_mnr = m*B0x + n*B0y - r
+                A_in_m0n0r0 = m0*Ax + n0*Ay - r0
+                B_in_m0n0r0 = m0*Bx + n0*By - r0
+                # is there any point from the streets on the line of the other street?
+                if A0_in_mnr * B0_in_mnr < EPSILON or A_in_m0n0r0 * B_in_m0n0r0 < EPSILON:
+                    # crossing:
+                    if A0_in_mnr * B0_in_mnr < -EPSILON and A_in_m0n0r0 * B_in_m0n0r0 < -EPSILON:
+                        print(f'({i}, {k}) cross')
+                        print(f'{i} = ({streets[i].get_vector()[0].get_pos()};{streets[i].get_vector()[1].get_pos()})')
+                        print(f'{k} = ({streets[k].get_vector()[0].get_pos()};{streets[k].get_vector()[1].get_pos()})')
+                        return False
+                    # if it didn't cross, then the problem is if A0 inside AB, or A inside A0B0, or something like that
+                    # otherwise, there is no problem with crossing or something like that
+                    A0_B0 = fcs.calculate_distance(A0,B0)
+                    A_B = fcs.calculate_distance(A,B)
+                    if A0_A + A0_B <= A_B + EPSILON or B0_A + B0_B <= A_B + EPSILON or \
+                        A0_A + B0_A <= A0_B0 + EPSILON or A0_B + B0_B <= A0_B0 + EPSILON:
+                        if A0_A + A0_B <= A_B + EPSILON:
+                            print(f'({A0} inside ({A};{B})')
+                        if B0_A + B0_B <= A_B + EPSILON:
+                            print(f'({B0} inside ({A};{B})')
+                        if A0_A + B0_A <= A0_B0 + EPSILON:
+                            print(f'({A} inside ({A0};{B0})')
+                        if A0_B + B0_B <= A0_B0 + EPSILON:
+                            print(f'({B} inside ({A0};{B0})')
+                        return False
+
+    return True

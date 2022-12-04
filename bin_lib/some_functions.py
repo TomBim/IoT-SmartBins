@@ -8,6 +8,30 @@ import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
 
+def calculate_line_equation(point1: tuple[float, float], point2: tuple[float, float]) -> tuple[float, float, float]:
+    """calculates m, n, r:
+    mx + ny = r
+
+    Args:
+        point1 (tuple[float]): _description_
+        point2 (tuple[float]): _description_
+
+    Returns:
+        list[float, float, float]: [m,n,r]
+    """
+    (x1,y1) = point1
+    (x2,y2) = point2
+    deltax = x2-x1
+    deltay = y2-y1
+    # if vertical line
+    if deltax == 0:
+        return (1,0,x1)
+    # if horizontal line
+    if deltay == 0:
+        return (0,1,y1)
+    # normal line
+    return (1/deltax, -1/deltay, (x1/deltax - y1/deltay))
+
 def calculate_distance(point1: tuple[float, float], point2: tuple[float, float]) -> float:
     return sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
@@ -374,7 +398,7 @@ def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: i
     n_com_points = len(attractiveness_of_com_points)
 
     # lambda for poisson: depends on number of com. points and their attractiveness
-    lambida = 1.03**(n_com_points * attractiveness_of_com_points.mean()) / 1800 * TIME_STEP
+    lambida = (n_com_points * attractiveness_of_com_points.mean())/150
     n_ppl = np.random.poisson(lambida)
 
     # create these ppl

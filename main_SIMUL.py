@@ -1,12 +1,13 @@
 from __future__ import annotations
+import numpy as np
 import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
 import bin_lib.some_functions as fcs
-import numpy as np
+from bin_lib.consts import *
 
 NUMBER_OF_SIMULATIONS = 1
-TIME_OF_SIMULATION = 3600*24*30
+TIME_OF_SIMULATION = 30*DAY
 TIME_STEP = 1
 FILE_INTERSECTIONS = "bin_lib/intersections.txt"
 FILE_STRETS = "bin_lib/streets.txt"

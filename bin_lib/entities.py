@@ -3,6 +3,7 @@ from math import inf, sqrt
 import heapq
 import random as rand
 import math as m
+from bin_lib.consts import *
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
 import numpy as np
@@ -24,8 +25,7 @@ class Entity:
 
     def get_pos_xy(self) -> tuple[float, float]:
         return self._pos_street.get_pos_xy()
-            
-
+           
 class Person(Entity):
     """Private variables
         id(int)
@@ -265,14 +265,14 @@ class Bin(Entity):
         filling_rate: float (L/s)
         full: bool
         vol_trash: float (L)
-        last_time_was_empted: int (seconds)
+        last_time_was_emptied: int (seconds)
     """
     def __init__(self, id: int, pos_street: map.Pos_Street, capacity: float):
         super().__init__(id, pos_street)
         self._capacity = capacity
         self._full = False
         self._vol_trash = 0
-        self._last_time_was_empted = -1
+        self._last_time_was_emptied = -1
         self._filling_rate = 0
 
     def is_full(self):
@@ -287,16 +287,26 @@ class Bin(Entity):
             self._full = True
         #update filling_rate
 
-    def empty_bin(self):
+    def empty_bin(self, time_now: int) -> float:
+        """it empties a bin and returns the volume of trash the bin had b4 being emptied
+
+        Returns:
+            float: vol of trash b4 getting emptied
+        """
+        x = self._vol_trash
         self._vol_trash = 0
         self._full = False
-        #self._last_time_was_empted = ?
+        self._last_time_was_emptied = time_now
+        return x
 
     def get_vol_trash(self):
         return self._vol_trash
 
     def get_percentage(self):
         return self._vol_trash / self._capacity
+
+    def get_last_time_was_emptied(self):
+        return self._last_time_was_emptied
 
 class Trash_Potential:
     """Variables:
@@ -423,13 +433,125 @@ class Commercial_Point(Entity):
         """
         return self._trash_generation_potential.generate_trash()
 
+class Street_Sweepers:
+    def __init__(self, map: map.Map):
+        self._trash_got_from_floor = 0
+        self._total_cost = 0
+        self._streets_cleaned = 0
+        self._map_ = map
+    
+    def clean_streets(self, trash_on_floor_vol: float, trash_on_floor_pos: list[map.Pos_Street]):
+        streets_to_be_cleaned: list[tuple[int, int]] = []
+        for trash in trash_on_floor_pos:
+            (intersection_A_id, intersection_B_id) = trash.get_street().get_intersctions_ids()
+            good = True
+            stop = False
+            i = 0
+            while i < len(streets_to_be_cleaned) and good and not stop:
+                s = streets_to_be_cleaned[i]
+                if intersection_A_id == s[0]
+                    if intersection_B_id == s[1]:
+                        good = False
+                        stop = True
+                    elif intersection_B_id > s[1]:
+                        stop = True
+                elif intersection_A_id > s[0]:
+                    stop = True
+                i += 1
+            if stop and good:
+                streets_to_be_cleaned.insert((intersection_A_id, intersection_B_id))
+        n = len(streets_to_be_cleaned)
+        self._streets_cleaned += n
+        self._total_cost += n * COST_OF_CLEANING_A_STREET
+        self._trash_got_from_floor += trash_on_floor_vol
+
+class Trash_Trucks:
+    def __init__(self, map: map.Map, everything: Everything):
+        self._trash_got_from_bins = 0
+        self._total_cost = 0
+        self._km_per_day = 0
+        self._bins_emptied = 0
+        self._map_ = map
+        self._everything_ = everything
+        self._days_used = 0
+
+    def empty_bins(self, everything: Everything, time_now: int):
+        bins_emptied: list[int] = []
+        bins_list = everything.get_bins_list()
+        for bin in bins_list:
+            if bin.get_percentage >= MIN_PERCENTAGE_BIN:
+                bins_emptied.append(bin.get_id())
+                bin.empty_bin(time_now)
+            elif time_now - bin.get_last_time_was_emptied() >= MAX_TIME_IGNORING_A_BIN:
+                bins_emptied.append(bin.get_id())
+                bin.empty_bin(time_now)
+        if len(bins_emptied) > 0:
+            total_dist = self._total_distance_traveled(bins_emptied)/1e3
+            self._total_cost += total_dist * COST_TRUCK_PER_KM + COST_TRUCK_PER_DAY
+            self._km_per_day = (self._km_per_day * self._days_used + total_dist) / (self._days_used + 1)
+            self._days_used += 1
+
+    def _dijkstra_intersections(self, start: map.Pos_Street):
+        intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in self._map_.get_intersections_list()]
+        pq: list[tuple[float, map.Intersection]] = []
+        starting_intersections = start.get_street().get_vector()
+
+        for intersection in starting_intersections:
+            distance = fcs.calculate_distance(start.get_pos_xy(), intersection.get_pos())
+            intersections_info[intersection.get_id()]['distance_to_origin'] = distance
+            heapq.heappush(pq, (distance, intersection))
+
+        while len(pq) > 0:
+            (distance, intersection) = heapq.heappop(pq)
+            id = intersection.get_id()
+            if not intersections_info[id]['closed']:
+                intersections_info[id]['closed'] = True
+                neighbors = intersection.get_neighbors()
+                neighbors_dists = intersection.get_distances_to_neighbors()
+                for neighbor, neighbor_dist in zip(neighbors, neighbors_dists):
+                    neighbor_id = neighbor.get_id()
+                    if intersections_info[neighbor_id]['distance_to_origin'] > distance + neighbor_dist:
+                        neighbor_dist = distance + neighbor_dist
+                        intersections_info[neighbor_id]['distance_to_origin'] = neighbor_dist
+                        intersections_info[neighbor_id]['parent'] = id
+                        heapq.heappush(pq, (neighbor_dist, neighbor))
+        return intersections_info
+
+    def _next_bin(self, bins_to_empty: list[int], start_bin: int) -> tuple[int, float]:
+        intersections_info = self._dijkstra_intersections(self._everything_.get_bin(start_bin))        
+        next_bin_distance = inf
+        next_bin = -1
+        for bin in bins_to_empty:
+            intersections_ids = self._everything_.get_bin(bin).get_pos_street().get_street().get_intersctions_ids()
+            if intersections_info[intersections_ids[0]]['distance to origin'] > intersections_info[intersections_ids[1]]['distance to origin']:
+                dist = intersections_info[intersections_ids[1]]['distance to origin']
+            else
+                dist = intersections_info[intersections_ids[0]]['distance to origin']
+            if dist < next_bin_distance:
+                next_bin = bin
+                next_bin_distance = dist
+        return (next_bin, next_bin_distance)
+
+    def _total_distance_traveled(self, bins_to_empty: list[int]):
+        start = bins_to_empty[0]
+        total_dist = 0
+        while len(bins_to_empty) > 0:
+            bins_to_empty.pop(0)
+            (next_bin, next_bin_distance) = self._next_bin(self, bins_to_empty, start)
+            total_dist += next_bin_distance
+            for i in range(len(bins_to_empty)):
+                if bins_to_empty[i] == next_bin:
+                    bins_to_empty.pop(i)
+                    break
+        return total_dist   
+        
 class Everything:
     def __init__(self, mapa: map.Map) -> None:
         self._ppl: list[Person] = []
         self._com_points: list[Commercial_Point] = []
         self._bins: list[Bin] = []
         self._ppl_ids: list[int] = []
-        self._bins_ids = []
+        self._bins_ids: list[int] = []
         self._food_points = 0
         self._nfood_points = 0
         self._job_points = 0
@@ -439,9 +561,11 @@ class Everything:
         self._last_persons_id = -1
         self._last_bins_id = -1
         self._com_points_attractiveness = np.array([])
-        self._trash_in_the_streets = 0
+        self._trash_in_the_streets: float = 0
         self._map = mapa
-        self._pos_trash_floor = []
+        self._pos_trash_floor: list[map.Pos_Street] = []
+        self._street_sweepers = Street_Sweepers(mapa)
+        self._trash_trucks = Trash_Trucks(mapa, self)
     
     def new_person(self):
         origin = rand.choices(range(self._food_points+self._nfood_points), self._com_points_attractiveness[0:(self._food_points + self._nfood_points)])
@@ -566,6 +690,8 @@ class Everything:
             bool: pop?
         """
         step = int(1.5 * p.get_fov() / p.get_speed())
+        if step > TIME_STEP:
+            step = TIME_STEP
         # if he didn't finish his comsumption
         if not p.has_trash():
             time_to_finish_consumption = p.get_time_to_finish_consumption()
@@ -607,7 +733,7 @@ class Everything:
                     self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
                 else:
                     self._trash_in_the_streets += p.get_trash_volume()
-                    self._pos_trash_floor.append(p.get_pos_xy())
+                    self._pos_trash_floor.append(p.get_pos_street())
                 return True
             # else, t == TIME_STEP
             return False
@@ -639,13 +765,12 @@ class Everything:
                 self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
             else:
                 self._trash_in_the_streets += p.get_trash_volume()
-                self._pos_trash_floor.append(p.get_pos_xy())
+                self._pos_trash_floor.append(p.get_pos_street())
             return True
         
         # he's with trash, but didn't lose all patience and time is gone
         return False
     
-
     def update_people(self, TIME_STEP: int):
         # n_pops = 0
         # for i in range(len(self._ppl)):

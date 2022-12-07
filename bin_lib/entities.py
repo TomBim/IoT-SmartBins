@@ -827,3 +827,23 @@ class Everything:
     
     def empty_bins(self, time):
         self._trash_trucks.empty_bins(self, time)
+
+    def reset(self):
+        self._ppl: list[Person] = []
+        self._bins: list[Bin] = []
+        self._ppl_ids: list[int] = []
+        self._bins_ids: list[int] = []
+        self._n_people = 0
+        self._n_bins = 0
+        self._last_persons_id = -1
+        self._last_bins_id = -1
+        self._trash_in_the_streets: float = 0
+        self._pos_trash_floor: list[map.Pos_Street] = []
+    
+    def reset_com_points(self):
+        self._com_points: list[Commercial_Point] = []
+        self._food_points = 0
+        self._nfood_points = 0
+        self._job_points = 0
+        self._n_com_points = 0
+        self._com_points_attractiveness = np.array([])

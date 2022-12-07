@@ -35,7 +35,7 @@ class Intersection:
         return self._dist_to_neighbors
 
 class Street:
-    def __init__(self, A: Intersection, B: Intersection):
+    def __init__(self, A: Intersection, B: Intersection, id: int):
         self._vec = (A, B)
         point1 = A.get_pos()
         point2 = B.get_pos()
@@ -43,6 +43,7 @@ class Street:
         A.add_neighbor(B, self._length)
         B.add_neighbor(A, self._length)
         self._intersctions_ids = (A.get_id(), B.get_id())
+        self._id = id
 
     def get_vector(self) -> tuple[Intersection, Intersection]:
         return self._vec
@@ -50,8 +51,11 @@ class Street:
     def get_length(self) -> float:
         return self._length
 
-    def get_intersctions_ids(self):
+    def get_intersctions_ids(self) -> tuple[int, int]:
         return self._intersctions_ids
+
+    def get_id(self) -> int:
+        return self._id
 
 class Map:
     def __init__(self):
@@ -62,7 +66,7 @@ class Map:
         self._intersections.append(Intersection(len(self._intersections),x,y))
 
     def add_street(self, indexA: int, indexB: int):
-        new_street = Street(self._intersections[indexA], self._intersections[indexB])
+        new_street = Street(self._intersections[indexA], self._intersections[indexB], len(self._streets))
         self._streets.append(new_street)
 
     def get_intersections_list(self) -> list[Intersection]:

@@ -7,7 +7,6 @@ from bin_lib.consts import *
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
 import numpy as np
-from map import EPSILON
 
 class Entity:
     def __init__(self, id: int, pos_street: map.Pos_Street) -> None:

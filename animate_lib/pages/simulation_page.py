@@ -100,8 +100,8 @@ class Simulation_Page:
     def draw_trash(self, screen):
         trash_radius = 2
         for t in self.everything._pos_trash_floor:
-            Ax = (t[0]) * PROPORTION - 5 + 10*random.random()
-            Ay = (t[1]) * PROPORTION - 5 + 10*random.random()
+            Ax = (t.get_pos_xy()[0]) * PROPORTION - 5 + 10*random.random()
+            Ay = (t.get_pos_xy()[1]) * PROPORTION - 5 + 10*random.random()
             pygame.draw.circle(screen, BLACK, (Ax, Ay), trash_radius)
 
     def draw_people(self, screen):

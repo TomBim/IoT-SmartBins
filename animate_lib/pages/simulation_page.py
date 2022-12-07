@@ -17,6 +17,9 @@ FILE_COMMERTIAL_POINTS = ""
 
 TIME_OF_SIMULATION = 3600*365*5
 TIME_STEP = 1
+# bins/streets are emptied/cleaned once each:
+FRAME_TO_EMPTY_BINS = 60*30
+FRAME_TO_CLEAN_STREETS = 60*20
 
 PROPORTION = WIDTH/540
 
@@ -41,6 +44,8 @@ class Simulation_Page:
         self.everything = entities.Everything(self.mapa)
         fcs.create_rand_com_points(self.mapa, (5,2,4), self.everything)
         fcs.create_rand_bins(self.mapa, self.everything)
+        self.frame_sweep_streets = 0
+        self.frame_empty_bins = 0
 
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
@@ -121,7 +126,6 @@ class Simulation_Page:
         value = f'{value:.2f} L'
         screen.blit(DEFAULT_FONT.render(str(value), True, BLACK), (WIDTH-100, 50))
 
-
             
             
     def update(self):
@@ -139,6 +143,17 @@ class Simulation_Page:
 
         self.everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
+        if self.frame_sweep_streets // FRAME_TO_CLEAN_STREETS:
+            self.everything.sweep_streets()
+            self.frame_sweep_streets = 0
+        else:
+            self.frame_sweep_streets += 1
+
+        if self.frame_empty_bins // FRAME_TO_EMPTY_BINS:
+            self.everything.empty_bins()
+            self.frame_sweep_streets = 0
+        else:
+            self.frame_sweep_streets += 1
 
         if self.buttons:
             for button in self.buttons:

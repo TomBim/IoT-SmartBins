@@ -816,7 +816,9 @@ class Everything:
         return self._bins
 
     def sweep_streets(self):
-        pass
+        self._street_sweepers.clean_streets(self._trash_in_the_streets, self._pos_trash_floor)
+        self._trash_in_the_streets = 0
+        self._pos_trash_floor = []
     
     def empty_bins(self):
         pass

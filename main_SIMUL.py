@@ -8,7 +8,7 @@ from bin_lib.consts import *
 
 NUMBER_OF_SIMULATIONS = 1
 TIME_OF_SIMULATION = 30*DAY
-TIME_STEP = 1
+TIME_STEP = 60
 FILE_INTERSECTIONS = "bin_lib/intersections.txt"
 FILE_STRETS = "bin_lib/streets.txt"
 FILE_COMMERTIAL_POINTS = ""
@@ -26,33 +26,36 @@ fcs.create_rand_bins(mapa, everything)
 
 NUMBER_OF_STEPS = TIME_OF_SIMULATION // TIME_STEP
 
-# x = np.array([])
-# v = np.array([])
-# bin0 = np.array([])
-# bin1 = np.array([])
-# bin2 = np.array([])
-# for sims in range(NUMBER_OF_SIMULATIONS):
-#     for t in range(NUMBER_OF_STEPS):
-#         everything.update_people(TIME_STEP)
-#         fcs.create_rand_ppl(mapa, everything, TIME_STEP)
-#         print(len(everything._ppl))
-        # x = np.append(x, t*60)
-        # v = np.append(v, everything.get_trash_in_the_street())
-        # bin0 = np.append(bin0, everything.get_bin(0).get_vol_trash())
-        # bin1 = np.append(bin1, everything.get_bin(1).get_vol_trash())
-        # bin2 = np.append(bin2, everything.get_bin(2).get_vol_trash())
+x = np.array([])
+v = np.array([])
+bin0 = np.array([])
+bin1 = np.array([])
+bin2 = np.array([])
+for sims in range(NUMBER_OF_SIMULATIONS):
+    for t in range(NUMBER_OF_STEPS):
+        everything.update_people(TIME_STEP)
+        fcs.create_rand_ppl(mapa, everything, TIME_STEP)
+        if ((int)(t*TIME_STEP) % TIME_TO_CLEAN_STREETS) == 0:
+            everything.sweep_streets()
+        if ((int)(t*TIME_STEP) % TIME_TO_EMPTY_BINS) == 0:
+            everything.empty_bins(t*TIME_STEP)
+        print(len(everything._ppl))
+        x = np.append(x, t*TIME_STEP/DAY)
+        v = np.append(v, everything.get_trash_in_the_street())
+        bin0 = np.append(bin0, everything.get_bin(0).get_vol_trash())
+        bin1 = np.append(bin1, everything.get_bin(1).get_vol_trash())
+        bin2 = np.append(bin2, everything.get_bin(2).get_vol_trash())
 
-# print(len(everything.get_bins_list()))
-# print(everything._last_bins_id)
-# print(len(everything.get_com_points()))
+print(len(everything.get_bins_list()))
+print(everything._last_bins_id)
+print(len(everything.get_com_points()))
 
-# plt.figure(figsize=(5,2.7), layout='constrained')
-# plt.scatter(x,v,s=12, label='chao')
-# plt.scatter(x,bin0,s=12, label='bin0')
-# plt.scatter(x,bin1,s=12, label='bin1')
-# plt.scatter(x,bin2,s=12, label='bin2')
-# plt.legend()
-# plt.grid(visible=True)
-# plt.show()
-
-
+plt.figure(figsize=(5,2.7), layout='constrained')
+plt.scatter(x,v,s=12, label='chao')
+plt.scatter(x,bin0,s=12, label='bin0')
+plt.scatter(x,bin1,s=12, label='bin1')
+plt.scatter(x,bin2,s=12, label='bin2')
+plt.xlabel("Days")
+plt.legend()
+plt.grid(visible=True)
+plt.show()

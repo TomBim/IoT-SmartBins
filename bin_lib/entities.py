@@ -440,30 +440,33 @@ class Street_Sweepers:
         self._map_ = map
     
     def clean_streets(self, trash_on_floor_vol: float, trash_on_floor_pos: list[map.Pos_Street]):
-        streets_to_be_cleaned: list[tuple[int, int]] = []
-        for trash in trash_on_floor_pos:
-            (intersection_A_id, intersection_B_id) = trash.get_street().get_intersctions_ids()
-            good = True
-            stop = False
-            i = 0
-            while i < len(streets_to_be_cleaned) and good and not stop:
-                s = streets_to_be_cleaned[i]
-                if intersection_A_id == s[0]:
-                    if intersection_B_id == s[1]:
-                        good = False
-                        stop = True
-                    elif intersection_B_id > s[1]:
-                        stop = True
-                elif intersection_A_id > s[0]:
-                    stop = True
-                i += 1
-            if stop and good:
-                streets_to_be_cleaned.insert((intersection_A_id, intersection_B_id))
+        # streets_to_be_cleaned: list[tuple[int, int]] = []
+        # for trash in trash_on_floor_pos:
+        #     (intersection_A_id, intersection_B_id) = trash.get_street().get_intersctions_ids()
+        #     good = True
+        #     stop = False
+        #     i = 0
+        #     while i < len(streets_to_be_cleaned) and good and not stop:
+        #         s = streets_to_be_cleaned[i]
+        #         if intersection_A_id == s[0]:
+        #             if intersection_B_id == s[1]:
+        #                 good = False
+        #                 stop = True
+        #             elif intersection_B_id > s[1]:
+        #                 stop = True
+        #         elif intersection_A_id > s[0]:
+        #             stop = True
+        #         i += 1
+        #     if stop and good:
+        #         streets_to_be_cleaned.insert((intersection_A_id, intersection_B_id))
+
+        streets_to_be_cleaned = {trash.get_street() for trash in trash_on_floor_pos}
+
         n = len(streets_to_be_cleaned)
         self._streets_cleaned += n
         self._total_cost += n * COST_OF_CLEANING_A_STREET
         self._trash_got_from_floor += trash_on_floor_vol
-
+        
 class Trash_Trucks:
     def __init__(self, map: map.Map, everything: Everything):
         self._trash_got_from_bins = 0
@@ -811,3 +814,9 @@ class Everything:
 
     def get_bins_list(self) -> list[Bin]:
         return self._bins
+
+    def sweep_streets(self):
+        pass
+    
+    def empty_bins(self):
+        pass

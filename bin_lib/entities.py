@@ -585,7 +585,7 @@ class Everything:
             if aux < 0:
                 payload["max_time_carrying_trash"] = 0
             else:
-                payload["max_time_carrying_trash"] = rand.gauss(mu=38, sigma=18)
+                payload["max_time_carrying_trash"] = int(rand.gauss(mu=38, sigma=18))
             payload["speed"] = abs(rand.gauss(mu = 1.25, sigma = .25))
             payload["trash_volume"] = trash_info[0]
             payload["time_of_consumption"] = trash_info[1]
@@ -758,7 +758,7 @@ class Everything:
         if found_a_bin:
             self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
             return True
-        if time_limit == 0:
+        if time_limit < 0:
             (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
             if found_a_bin:
                 self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
@@ -779,16 +779,29 @@ class Everything:
         #         self._ppl_ids.pop(i-n_pops)
         #         self._n_people -= 1
         #         n_pops += 1
+        
         new_ppl = []
         new_ppl_ids = []
         for p in self._ppl:
-            antes = p.get_pos_xy()
-            self._update_a_person(p, TIME_STEP)
-            if antes != p.get_pos_xy():
+            # antes = p.get_pos_xy()
+            if not self._update_a_person(p, TIME_STEP):
+            # if antes != p.get_pos_xy():
                 new_ppl.append(p)
                 new_ppl_ids.append(p.get_id())
         self._ppl = new_ppl
         self._ppl_ids = new_ppl_ids
+
+
+        # new_ppl = []
+        # new_ppl_ids = []
+        # for p in self._ppl:
+        #     antes = p.get_pos_xy()
+        #     self._update_a_person(p, TIME_STEP)
+        #     if antes != p.get_pos_xy():
+        #         new_ppl.append(p)
+        #         new_ppl_ids.append(p.get_id())
+        # self._ppl = new_ppl
+        # self._ppl_ids = new_ppl_ids
         
     def get_trash_in_the_street(self):
         return self._trash_in_the_streets

@@ -1,3 +1,6 @@
+# epsilons
+EPSILON = 1e-3
+
 # time consts
 MINUTE = 60
 HOUR = 3600
@@ -19,6 +22,10 @@ MAX_TIME_IGNORING_A_BIN = 7*DAY
 COST_TRUCK_PER_KM = 15
 COST_TRUCK_PER_DAY = 10
 COST_OF_CLEANING_A_STREET = 10
+
+# consts for potentials
+KE = 1e9
+KG = 6e-6
 
 # Map minimum distance
 EPSILON = 1e-3

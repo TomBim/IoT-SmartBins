@@ -7,7 +7,6 @@ from bin_lib.consts import *
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
 import numpy as np
-from map import EPSILON
 
 class Entity:
     def __init__(self, id: int, pos_street: map.Pos_Street) -> None:
@@ -586,7 +585,7 @@ class Everything:
             if aux < 0:
                 payload["max_time_carrying_trash"] = 0
             else:
-                payload["max_time_carrying_trash"] = rand.gauss(mu=38, sigma=18)
+                payload["max_time_carrying_trash"] = int(rand.gauss(mu=38, sigma=18))
             payload["speed"] = abs(rand.gauss(mu = 1.25, sigma = .25))
             payload["trash_volume"] = trash_info[0]
             payload["time_of_consumption"] = trash_info[1]

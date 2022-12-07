@@ -2,5 +2,7 @@ import sys
 sys.platform
 import rpyc
 
-c = rpyc.classic.connect("c2")
-c.modules.sys
+conn = rpyc.connect("0.0.0.0", 12345)
+x = conn.root.add(4,7)
+y
+print(x)

@@ -4,7 +4,6 @@ import numpy as np
 import bin_lib.some_functions as fcs
 from bin_lib.consts import *
 
-EPSILON = 1e-3
 
 class Intersection:
     def __init__(self, id: int, x: float, y: float):

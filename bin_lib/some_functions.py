@@ -2,11 +2,38 @@ from __future__ import annotations
 import random as rand
 import numpy as np
 import math as m
-from math import sqrt
+from math import sqrt, inf
+import heapq
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
+
+def dijkstra(mapa: map.Map, origin: map.Pos_Street):
+    intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in mapa.get_intersections_list()]
+    pq: list[tuple[float, map.Intersection]] = []
+    starting_intersections = origin.get_street().get_vector()
+
+    for intersection in starting_intersections:
+        distance = calculate_distance(origin.get_pos_xy(), intersection.get_pos())
+        intersections_info[intersection.get_id()]['distance_to_origin'] = distance
+        heapq.heappush(pq, (distance, intersection))
+
+    while len(pq) > 0:
+        (distance, intersection) = heapq.heappop(pq)
+        id = intersection.get_id()
+        if not intersections_info[id]['closed']:
+            intersections_info[id]['closed'] = True
+            neighbors = intersection.get_neighbors()
+            neighbors_dists = intersection.get_distances_to_neighbors()
+            for neighbor, neighbor_dist in zip(neighbors, neighbors_dists):
+                neighbor_id = neighbor.get_id()
+                if intersections_info[neighbor_id]['distance_to_origin'] > distance + neighbor_dist:
+                    neighbor_dist = distance + neighbor_dist
+                    intersections_info[neighbor_id]['distance_to_origin'] = neighbor_dist
+                    intersections_info[neighbor_id]['parent'] = id
+                    heapq.heappush(pq, (neighbor_dist, neighbor))
+    return intersections_info
 
 def calculate_line_equation(point1: tuple[float, float], point2: tuple[float, float]) -> tuple[float, float, float]:
     """calculates m, n, r:

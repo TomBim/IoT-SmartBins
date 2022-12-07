@@ -37,8 +37,8 @@ class Simulation_Page:
 
         self.everything.reset()
         fcs.create_rand_bins(self.mapa, self.everything)
-        self.frame_sweep_streets = 0
-        self.frame_empty_bins = 0
+        self.frame_count_sweep_streets = 0
+        self.frame_count_empty_bins = 0
 
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
@@ -153,18 +153,15 @@ class Simulation_Page:
 
         self.everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
-        
-        if self.frame_sweep_streets // FRAME_TO_CLEAN_STREETS:
+        if self.frame_count_sweep_streets // FRAME_TO_CLEAN_STREETS:
             self.everything.sweep_streets()
-            self.frame_sweep_streets = 0
-        else:
-            self.frame_sweep_streets += 1
-
-        if self.frame_empty_bins // FRAME_TO_EMPTY_BINS:
-            self.everything.empty_bins()
-            self.frame_empty_bins = 0
-        else:
-            self.frame_empty_bins += 1
+            self.frame_count_sweep_streets = 0
+        
+        if (self.frame_count_empty_bins % FRAME_TO_EMPTY_BINS) == 0 and self.frame_count_empty_bins > 0:
+            self.everything.empty_bins(self.frame_count_empty_bins)
+        
+        self.frame_count_sweep_streets += 1
+        self.frame_count_empty_bins += 1
 
         if self.buttons:
             for button in self.buttons:

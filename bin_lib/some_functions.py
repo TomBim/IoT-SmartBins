@@ -426,6 +426,7 @@ def create_rand_ppl(mapa: map.Map, everything: entities.Everything, TIME_STEP: i
     n_com_points = len(attractiveness_of_com_points)
 
     # lambda for poisson: depends on number of com. points and their attractiveness
+    #lambida = 1.03**(n_com_points * attractiveness_of_com_points.mean())*TIME_STEP/1800
     lambida = (n_com_points * attractiveness_of_com_points.mean())/150
     n_ppl = np.random.poisson(lambida)
 

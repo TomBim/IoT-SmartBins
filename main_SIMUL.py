@@ -5,6 +5,7 @@ import bin_lib.map as map
 import bin_lib.entities as entities
 import bin_lib.some_functions as fcs
 from bin_lib.consts import *
+import potentials
 
 NUMBER_OF_SIMULATIONS = 1
 TIME_OF_SIMULATION = 30*DAY
@@ -24,6 +25,22 @@ everything = entities.Everything(mapa)
 fcs.create_rand_com_points(mapa, (5,2,4), everything)
 fcs.create_rand_bins(mapa, everything)
 
+# create potentials
+com_points_1st = potentials.Potential(mapa, 3, 100, 1)
+com_points_2nd = potentials.Potential(mapa, 5, 1e5, 2)
+bins_2nd = potentials.Potential(mapa, 5, 1e6, 2)
+
+# create charges
+for cp in everything.get_com_points():
+    com_points_1st.new_charge(10, cp.get_pos_street(), mapa, cp.get_id())
+    com_points_2nd.new_charge(100, cp.get_pos_street(), mapa, cp.get_id())
+for b in everything.get_bins_list():
+    bins_2nd.new_charge(10, b.get_pos_street(), mapa, b.get_id())
+
+# sei la
+filling_rate_average = np.array([])
+
+
 NUMBER_OF_STEPS = TIME_OF_SIMULATION // TIME_STEP
 
 x = np.array([])
@@ -33,14 +50,17 @@ bin1 = np.array([])
 bin2 = np.array([])
 for sims in range(NUMBER_OF_SIMULATIONS):
     for t in range(NUMBER_OF_STEPS):
-        everything.update_people(TIME_STEP)
+        time_now = t*TIME_STEP
+        everything.update_people(TIME_STEP, time_now)
         fcs.create_rand_ppl(mapa, everything, TIME_STEP)
-        if ((int)(t*TIME_STEP) % TIME_TO_CLEAN_STREETS) == 0:
+        if ((int)(time_now) % TIME_TO_CLEAN_STREETS) == 0:
             everything.sweep_streets()
-        if ((int)(t*TIME_STEP) % TIME_TO_EMPTY_BINS) == 0:
-            everything.empty_bins(t*TIME_STEP)
+        if ((int)(time_now) % TIME_TO_EMPTY_BINS) == 0:
+            everything.empty_bins(time_now)
+            for i in len(everything.get_bins_list()):
+                filling_rate_average[i] = (filling_rate_average[i] + everything.get_bins_list()[i].get_filling_rate()) / 2
         print(len(everything._ppl))
-        x = np.append(x, t*TIME_STEP/DAY)
+        x = np.append(x, time_now/DAY)
         v = np.append(v, everything.get_trash_in_the_street())
         bin0 = np.append(bin0, everything.get_bin(0).get_vol_trash())
         bin1 = np.append(bin1, everything.get_bin(1).get_vol_trash())

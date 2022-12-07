@@ -49,6 +49,8 @@ class Pontual_Charge:
         self._q = new_q
         self._need_update_potentials = True
 
+    def set_position(self, new_pos_street: map.Pos_Street):
+        self._pos_street = new_pos_street
 
     def set_need_update(self, distances: bool, potentials: bool):
         """You can't set the neediness as false in this function. If you want to, use set_updated

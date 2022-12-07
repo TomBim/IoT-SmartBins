@@ -8,6 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import bin_lib.map as map
 import bin_lib.entities as entities
+from bin_lib.consts import *
 
 def dijkstra(mapa: map.Map, origin: map.Pos_Street):
     intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in mapa.get_intersections_list()]
@@ -319,7 +320,7 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int], eve
         
         # generate random position
         street = streets[rand.randrange(n_streets)]
-        rand_pos_street = map.Pos_Street(street, rand.random())
+        rand_pos_street = map.Pos_Street(street, EPSILON + (1-2*EPSILON)*rand.random())
 
         # put in the vector
         customer_potential = rand.random()

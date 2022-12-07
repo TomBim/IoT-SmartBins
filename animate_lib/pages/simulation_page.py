@@ -114,6 +114,9 @@ class Simulation_Page:
                 pygame.draw.circle(screen, BLUE, (Ax, Ay), p.get_fov() * PROPORTION, 2)
             text = self.ppls_font.render(f'{p.get_id()}', False, BLUE)
             self.screen.blit(text, (Ax,Ay))
+            pygame.draw.line(screen, GREEN, (Ax, Ay), (p.get_destination().get_pos_xy()[0]*PROPORTION, p.get_destination().get_pos_xy()[1]*PROPORTION), 2)
+            if len(p.get_path()) > 0:
+                pygame.draw.line(screen, BLACK, (Ax, Ay), (p.get_path()[0].get_pos()[0]*PROPORTION, p.get_path()[0].get_pos()[1]*PROPORTION), 1)
 
     
     def draw_trash_counter(self, screen):

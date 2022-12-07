@@ -29,3 +29,6 @@ KG = 6e-6
 
 # Map minimum distance
 EPSILON = 1e-3
+
+# time to update potentials
+TIME_TO_UPDATE_POTS = 1*DAY

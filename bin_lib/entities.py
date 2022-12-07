@@ -277,7 +277,7 @@ class Bin(Entity):
         self._full = False
         self._vol_trash = 0
         self._last_time_was_emptied = -1
-        self._filling_rate = 0
+        self._filling_rate = 0 # percentage / s
 
     def is_full(self):
         return self._full
@@ -285,10 +285,11 @@ class Bin(Entity):
     def set_capacity(self, new_capacity: float):
         self._capacity = new_capacity
 
-    def put_trash(self, vol_trash):
+    def put_trash(self, vol_trash: float, time_now: int):
         self._vol_trash += vol_trash
         if(self._vol_trash > self._capacity):
             self._full = True
+            self._filling_rate = 1 / (time_now - self._last_time_was_emptied)
         #update filling_rate
 
     def empty_bin(self, time_now: int) -> float:
@@ -297,6 +298,8 @@ class Bin(Entity):
         Returns:
             float: vol of trash b4 getting emptied
         """
+        if not self._full:
+            self._filling_rate = self.get_percentage() / (time_now - self._last_time_was_emptied)
         x = self._vol_trash
         self._vol_trash = 0
         self._full = False
@@ -311,6 +314,9 @@ class Bin(Entity):
 
     def get_last_time_was_emptied(self):
         return self._last_time_was_emptied
+
+    def get_filling_rate(self):
+        return self._filling_rate
 
 class Trash_Potential:
     """Variables:
@@ -686,7 +692,7 @@ class Everything:
 
         return (False, -1)
 
-    def _update_a_person(self, p: Person, TIME_STEP: int) -> bool:
+    def _update_a_person(self, p: Person, TIME_STEP: int, time_now: int) -> bool:
         """
 
         Args:
@@ -732,12 +738,12 @@ class Everything:
                 t += 1
                 p.increase_time_with_trash(1)
             if found_a_bin:
-                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume(), time_now)
                 return True
             if time_limit == 0:
                 (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
                 if found_a_bin:
-                    self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                    self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume(), time_now)
                 else:
                     self._trash_in_the_streets += p.get_trash_volume()
                     self._pos_trash_floor.append(p.get_pos_street())
@@ -764,12 +770,12 @@ class Everything:
             t += 1
             p.increase_time_with_trash(1)
         if found_a_bin:
-            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+            self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume(), time_now)
             return True
         if time_limit <= 0:
             (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
             if found_a_bin:
-                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
+                self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume(), time_now)
             else:
                 self._trash_in_the_streets += p.get_trash_volume()
                 self._pos_trash_floor.append(p.get_pos_street())
@@ -778,7 +784,7 @@ class Everything:
         # he's with trash, but didn't lose all patience and time is gone
         return False
     
-    def update_people(self, TIME_STEP: int):
+    def update_people(self, TIME_STEP: int, time_now:int):
         # n_pops = 0
         # for i in range(len(self._ppl)):
         #     p = self._ppl[i-n_pops]
@@ -792,7 +798,7 @@ class Everything:
         new_ppl_ids = []
         for p in self._ppl:
             # antes = p.get_pos_xy()
-            if not self._update_a_person(p, TIME_STEP):
+            if not self._update_a_person(p, TIME_STEP, time_now):
             # if antes != p.get_pos_xy():
                 new_ppl.append(p)
                 new_ppl_ids.append(p.get_id())

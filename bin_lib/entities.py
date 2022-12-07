@@ -486,7 +486,7 @@ class Trash_Trucks:
         bins_emptied: list[int] = []
         bins_list = everything.get_bins_list()
         for bin in bins_list:
-            if bin.get_percentage >= MIN_PERCENTAGE_BIN:
+            if bin.get_percentage() >= MIN_PERCENTAGE_BIN:
                 bins_emptied.append(bin.get_id())
                 bin.empty_bin(time_now)
             elif time_now - bin.get_last_time_was_emptied() >= MAX_TIME_IGNORING_A_BIN:
@@ -525,15 +525,15 @@ class Trash_Trucks:
         return intersections_info
 
     def _next_bin(self, bins_to_empty: list[int], start_bin: int) -> tuple[int, float]:
-        intersections_info = self._dijkstra_intersections(self._everything_.get_bin(start_bin))        
+        intersections_info = self._dijkstra_intersections(self._everything_.get_bin(start_bin).get_pos_street())        
         next_bin_distance = inf
         next_bin = -1
         for bin in bins_to_empty:
             intersections_ids = self._everything_.get_bin(bin).get_pos_street().get_street().get_intersctions_ids()
-            if intersections_info[intersections_ids[0]]['distance to origin'] > intersections_info[intersections_ids[1]]['distance to origin']:
-                dist = intersections_info[intersections_ids[1]]['distance to origin']
+            if intersections_info[intersections_ids[0]]['distance_to_origin'] > intersections_info[intersections_ids[1]]['distance_to_origin']:
+                dist = intersections_info[intersections_ids[1]]['distance_to_origin']
             else:
-                dist = intersections_info[intersections_ids[0]]['distance to origin']
+                dist = intersections_info[intersections_ids[0]]['distance_to_origin']
             if dist < next_bin_distance:
                 next_bin = bin
                 next_bin_distance = dist
@@ -544,7 +544,7 @@ class Trash_Trucks:
         total_dist = 0
         while len(bins_to_empty) > 0:
             bins_to_empty.pop(0)
-            (next_bin, next_bin_distance) = self._next_bin(self, bins_to_empty, start)
+            (next_bin, next_bin_distance) = self._next_bin(bins_to_empty, start)
             total_dist += next_bin_distance
             for i in range(len(bins_to_empty)):
                 if bins_to_empty[i] == next_bin:
@@ -825,5 +825,5 @@ class Everything:
         self._trash_in_the_streets = 0
         self._pos_trash_floor = []
     
-    def empty_bins(self):
-        pass
+    def empty_bins(self, time):
+        self._trash_trucks.empty_bins(self, time)

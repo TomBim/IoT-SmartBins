@@ -23,7 +23,7 @@ class Potential:
         self._order = order
 
     def new_charge(self, q, pos_street, mapa, id):
-        self._pontual_charges.append(Pontual_Charge(q, pos_street, mapa, id, self._order))
+        self._pontual_charges.append(Pontual_Charge(q, pos_street, mapa, id, self._potential_distributed_on_streets, self._K, self._order, self._n_steps_in_street))
 
 
     def update_distribution_of_potentials(self):
@@ -31,7 +31,7 @@ class Potential:
             q.update(self._n_steps_in_street)
         
 class Pontual_Charge:
-    def __init__(self, q: float, pos_street: map.Pos_Street, mapa: map.Map, id: int, total_pot_matrix: np.array, K: float, order: int) -> None:
+    def __init__(self, q: float, pos_street: map.Pos_Street, mapa: map.Map, id: int, total_pot_matrix: np.array, K: float, order: int, n_steps_in_street: int) -> None:
         self._q = q
         self._pos_street = pos_street
         self._map_ = mapa
@@ -43,7 +43,8 @@ class Pontual_Charge:
         self._need_update_potentials = True
         self._intersections_distance = []
         self._pot_matrix = np.array([])
-        self.update()
+        self._n_steps_in_street = n_steps_in_street
+        self.update(n_steps_in_street)
 
     def set_q(self, new_q: float):
         self._q = new_q
@@ -94,9 +95,14 @@ class Pontual_Charge:
             streets = self._map_.get_streets_list()
             n_streets = len(streets)
 
-            # update intersections_distance
+             # update intersections_distance
             intersections_info = fcs.dijkstra(self._map_, self._pos_street)
-            self._intersections_distance = np.array(intersections_info['distance to origin'])
+            # print(intersections_info)
+            self._intersections_distance = np.array([])
+            for i in range(len(intersections_info)):
+                self._intersections_distance = np.append(self._intersections_distance,intersections_info[i]['distance_to_origin'])
+            # print(np.array(intersections_info[0:-1]['distance to origin']))
+            # self._intersections_distance = np.array(intersections_info[:]['distance to origin'])
             self._need_update_distances = False
 
             # update the matrix with potentials from this charge

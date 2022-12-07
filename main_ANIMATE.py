@@ -25,8 +25,8 @@ class Simulation:
         
         pygame.display.set_caption('Simulador Smart Bin')
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
         pygame.font.init()
+
         
         self.clock = pygame.time.Clock()
 

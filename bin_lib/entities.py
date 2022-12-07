@@ -7,7 +7,6 @@ from bin_lib.consts import *
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
 import numpy as np
-from map import EPSILON
 
 class Entity:
     def __init__(self, id: int, pos_street: map.Pos_Street) -> None:
@@ -449,7 +448,7 @@ class Street_Sweepers:
             i = 0
             while i < len(streets_to_be_cleaned) and good and not stop:
                 s = streets_to_be_cleaned[i]
-                if intersection_A_id == s[0]
+                if intersection_A_id == s[0]:
                     if intersection_B_id == s[1]:
                         good = False
                         stop = True
@@ -525,7 +524,7 @@ class Trash_Trucks:
             intersections_ids = self._everything_.get_bin(bin).get_pos_street().get_street().get_intersctions_ids()
             if intersections_info[intersections_ids[0]]['distance to origin'] > intersections_info[intersections_ids[1]]['distance to origin']:
                 dist = intersections_info[intersections_ids[1]]['distance to origin']
-            else
+            else:
                 dist = intersections_info[intersections_ids[0]]['distance to origin']
             if dist < next_bin_distance:
                 next_bin = bin
@@ -586,7 +585,7 @@ class Everything:
             if aux < 0:
                 payload["max_time_carrying_trash"] = 0
             else:
-                payload["max_time_carrying_trash"] = rand.gauss(mu=38, sigma=18)
+                payload["max_time_carrying_trash"] = int(rand.gauss(mu=38, sigma=18))
             payload["speed"] = abs(rand.gauss(mu = 1.25, sigma = .25))
             payload["trash_volume"] = trash_info[0]
             payload["time_of_consumption"] = trash_info[1]
@@ -784,8 +783,8 @@ class Everything:
         new_ppl_ids = []
         for p in self._ppl:
             antes = p.get_pos_xy()
-            self._update_a_person(p, TIME_STEP)
-            if antes != p.get_pos_xy():
+            pop = self._update_a_person(p, TIME_STEP)
+            if antes != p.get_pos_xy() and not pop:
                 new_ppl.append(p)
                 new_ppl_ids.append(p.get_id())
         self._ppl = new_ppl

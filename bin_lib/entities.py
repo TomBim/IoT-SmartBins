@@ -758,7 +758,7 @@ class Everything:
         if found_a_bin:
             self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())
             return True
-        if time_limit < 0:
+        if time_limit <= 0:
             (found_a_bin, bin_id) = self.check_for_nearby_bins(p)
             if found_a_bin:
                 self._bins[self._id2index(self._bins_ids, bin_id)].put_trash(p.get_trash_volume())

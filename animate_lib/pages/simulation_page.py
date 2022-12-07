@@ -149,6 +149,7 @@ class Simulation_Page:
 
         self.everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
+        
         if self.frame_sweep_streets // FRAME_TO_CLEAN_STREETS:
             self.everything.sweep_streets()
             self.frame_sweep_streets = 0
@@ -157,9 +158,9 @@ class Simulation_Page:
 
         if self.frame_empty_bins // FRAME_TO_EMPTY_BINS:
             self.everything.empty_bins()
-            self.frame_sweep_streets = 0
+            self.frame_empty_bins = 0
         else:
-            self.frame_sweep_streets += 1
+            self.frame_empty_bins += 1
 
         if self.buttons:
             for button in self.buttons:

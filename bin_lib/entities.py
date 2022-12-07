@@ -203,12 +203,12 @@ class Person(Entity):
             # if he didn't change of street in this time step
             if last_intersection == None:
                 s = self.get_pos_street().get_street()
-                pos_in_street = self.get_pos_street().get_pos_in_street()
+                old_pos_in_street = self.get_pos_street().get_pos_in_street()
             # if he did change
             else:
                 s = self._map_.search_for_a_street(last_intersection, next_intersection)
                 start = last_intersection.get_pos()
-                pos_in_street = fcs.calculate_distance(last_intersection.get_pos(), s.get_vector()[0].get_pos()) / s.get_length()
+                old_pos_in_street = fcs.calculate_distance(last_intersection.get_pos(), s.get_vector()[0].get_pos()) / s.get_length()
             destin = next_intersection.get_pos()
         # then he's at destination's street
         else:
@@ -217,18 +217,23 @@ class Person(Entity):
             # if he changed of street in this time step
             if not (last_intersection == None):
                 start = last_intersection.get_pos()
-                pos_in_street = fcs.calculate_distance(last_intersection.get_pos(), s.get_vector()[0].get_pos()) / s.get_length()
+                old_pos_in_street = fcs.calculate_distance(last_intersection.get_pos(), s.get_vector()[0].get_pos()) / s.get_length()
         (A, B) = s.get_vector()
         (Ax, Ay) = A.get_pos()
         (Bx, By) = B.get_pos()
         if abs(Ax-Bx) > EPSILON: # se nao é reta vertical
             m = (destin[0] - start[0])*(Bx-Ax)
             if m > 0: #apontam para o mesmo lugar
-                new_pos_in_street = pos_in_street + d / s.get_length()
+                new_pos_in_street = old_pos_in_street + d / s.get_length()
             else:#se apontam em sentidos opostos
-                new_pos_in_street = pos_in_street - d / s.get_length()
+                new_pos_in_street = old_pos_in_street - d / s.get_length()
         else: #se for vertical
-            new_pos_in_street = pos_in_street + d / (By - Ay)
+            m = (destin[1] - start[1])*(By-Ay)
+            if m > 0:
+                new_pos_in_street = old_pos_in_street + d / (By - Ay)
+            else:
+                new_pos_in_street = old_pos_in_street - d / (By - Ay)
+                
         # just to be cautious with float problems
         if new_pos_in_street >= 1:
             new_pos_in_street = 1 - EPSILON

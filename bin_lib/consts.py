@@ -26,3 +26,6 @@ COST_OF_CLEANING_A_STREET = 10
 # consts for potentials
 KE = 1e9
 KG = 6e-6
+
+# Map minimum distance
+EPSILON = 1e-3

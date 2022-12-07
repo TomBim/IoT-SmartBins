@@ -449,7 +449,7 @@ class Street_Sweepers:
             i = 0
             while i < len(streets_to_be_cleaned) and good and not stop:
                 s = streets_to_be_cleaned[i]
-                if intersection_A_id == s[0]
+                if intersection_A_id == s[0]:
                     if intersection_B_id == s[1]:
                         good = False
                         stop = True
@@ -525,7 +525,7 @@ class Trash_Trucks:
             intersections_ids = self._everything_.get_bin(bin).get_pos_street().get_street().get_intersctions_ids()
             if intersections_info[intersections_ids[0]]['distance to origin'] > intersections_info[intersections_ids[1]]['distance to origin']:
                 dist = intersections_info[intersections_ids[1]]['distance to origin']
-            else
+            else:
                 dist = intersections_info[intersections_ids[0]]['distance to origin']
             if dist < next_bin_distance:
                 next_bin = bin

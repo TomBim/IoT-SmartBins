@@ -4,7 +4,7 @@ from bin_lib.consts import *
 import numpy as np
 
 class Potential:
-    def __init__(self, mapa: map.Map, n_steps_in_stret: int, constant: float):
+    def __init__(self, mapa: map.Map, n_steps_in_stret: int, constant: float, order: int):
         """
         Args:
             mapa (map.Map): _description_
@@ -17,13 +17,13 @@ class Potential:
         self._n_steps_in_street = n_steps_in_stret
         self._dist_in_street_step = 1 / (n_steps_in_stret + 1)
         self._map_ = mapa
-        self._potential_distributed_on_streets = np.zeros([])
         self._n_streets = len(mapa.get_streets_list())
         self._potential_distributed_on_streets = np.zeros([self._n_streets, (n_steps_in_stret + 2)])
         self._K = constant
+        self._order = order
 
     def new_charge(self, q, pos_street, mapa, id):
-        self._pontual_charges.append(Pontual_Charge(q, pos_street, mapa, id))
+        self._pontual_charges.append(Pontual_Charge(q, pos_street, mapa, id, self._order))
 
 
     def update_distribution_of_potentials(self):
@@ -31,13 +31,14 @@ class Potential:
             q.update(self._n_steps_in_street)
         
 class Pontual_Charge:
-    def __init__(self, q: float, pos_street: map.Pos_Street, mapa: map.Map, id: int, total_pot_matrix: np.array, K: float) -> None:
+    def __init__(self, q: float, pos_street: map.Pos_Street, mapa: map.Map, id: int, total_pot_matrix: np.array, K: float, order: int) -> None:
         self._q = q
         self._pos_street = pos_street
         self._map_ = mapa
         self._id = id
         self._total_pot_matrix = total_pot_matrix
         self._K = K
+        self._order = order
         self._need_update_distances = True
         self._need_update_potentials = True
         self._intersections_distance = []
@@ -115,7 +116,7 @@ class Pontual_Charge:
                         d = x if x>0 else y
                         if d < EPSILON:
                             d = EPSILON
-                        m_pot_self[i,k] = d
+                        m_pot_self[i,k] = d**self._order
                 # general case: the distance inside a street is the smaller distance
                 # (from the point in street to an intersection) + (from the intersection to the charge)
                 else:
@@ -131,7 +132,7 @@ class Pontual_Charge:
                         d = x if x<y else y
                         if d < EPSILON:
                             d = EPSILON
-                        m_pot_self[i,k] = d
+                        m_pot_self[i,k] = d**self._order
             self._pot_matrix = self._K * self._q / m_pot_self
             self._need_update_potentials = False
 
@@ -145,10 +146,10 @@ class Pontual_Charge:
             # calculate old K*q
             d = self._intersections_distance[self._map_.get_street(0).get_intersctions_ids()[0]]
             if d > EPSILON:
-                old_Kq = self._pot_matrix[0,0] * d
+                old_Kq = self._pot_matrix[0,0] * d**self._order
             else:
                 d = self._intersections_distance[self._map_.get_street(0).get_intersctions_ids()[1]]
-                old_Kq = self._pot_matrix[0,(n_steps_in_street + 1)] * d
+                old_Kq = self._pot_matrix[0,(n_steps_in_street + 1)] * d**self._order
 
             # update local matrix and, afther, the global one
             self._pot_matrix = self._pot_matrix  * (self._K * self._q / old_Kq)

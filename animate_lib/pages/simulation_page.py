@@ -43,8 +43,11 @@ class Simulation_Page:
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
 
+        self.view_path = True
+
         self.buttons = [
-            Default_Button(screen, 50, 50 , 40, 40, DEFAULT_FONT, "x", (150, 150, 150), lambda: change_screen("menu_page")),
+            Default_Button(screen, 50, 50, 40, 40, DEFAULT_FONT, "x", DARK_GRAY, lambda: change_screen("menu_page")),
+            Default_Button(screen, 220, 50, 250, 40, DEFAULT_FONT, "Mostrar/Esconder Rotas", DARK_GRAY, lambda: self.toggle_view_path()),
         ]
 
 
@@ -59,7 +62,7 @@ class Simulation_Page:
 
 
     def draw_intersections(self, screen):
-        inter_radius = 5 
+        inter_radius = 7
         for inter in self.mapa.get_intersections_list():
             Ax = (inter.get_pos()[0]) * PROPORTION
             Ay = (inter.get_pos()[1]) * PROPORTION
@@ -114,8 +117,7 @@ class Simulation_Page:
             # Draw person fov when with trash
             if p._has_trash:
                 pygame.draw.circle(screen, color, (Ax, Ay), p.get_fov() * PROPORTION, 2)
-            TOGGLE_PATH_VIEW = True
-            if TOGGLE_PATH_VIEW:
+            if self.view_path:
                 # Draw person destination
                 destinX = p.get_destination().get_pos_xy()[0] * PROPORTION
                 destinY = p.get_destination().get_pos_xy()[1] * PROPORTION
@@ -132,7 +134,9 @@ class Simulation_Page:
         value = f'{value:.2f} L'
         screen.blit(DEFAULT_FONT.render(str(value), True, BLACK), (WIDTH-100, 50))
 
-            
+
+    def toggle_view_path(self):
+        self.view_path = not self.view_path
             
     def update(self):
         pygame.display.update()

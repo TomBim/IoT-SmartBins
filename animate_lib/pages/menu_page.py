@@ -48,7 +48,7 @@ class Menu_Page:
 
 
     def draw_intersections(self, screen):
-        inter_radius = 5 
+        inter_radius = 7
         for inter in self.mapa.get_intersections_list():
             Ax = (inter.get_pos()[0]) * PROPORTION
             Ay = (inter.get_pos()[1]) * PROPORTION

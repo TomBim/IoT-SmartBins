@@ -11,6 +11,9 @@ DEFAULT_FONT = pygame.font.SysFont('arial', 20)
 import bin_lib.some_functions as fcs
 
 TIME_STEP = 1
+# bins/streets are emptied/cleaned once each:
+FRAME_TO_EMPTY_BINS = 60*30
+FRAME_TO_CLEAN_STREETS = 60*20
 
 
 def draw_health_bar(surf, pos, size, borderC, backC, healthC, progress):
@@ -34,6 +37,8 @@ class Simulation_Page:
 
         self.everything.reset()
         fcs.create_rand_bins(self.mapa, self.everything)
+        self.frame_sweep_streets = 0
+        self.frame_empty_bins = 0
 
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
@@ -127,7 +132,6 @@ class Simulation_Page:
         value = f'{value:.2f} L'
         screen.blit(DEFAULT_FONT.render(str(value), True, BLACK), (WIDTH-100, 50))
 
-
             
             
     def update(self):
@@ -145,6 +149,17 @@ class Simulation_Page:
 
         self.everything.update_people(TIME_STEP)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
+        if self.frame_sweep_streets // FRAME_TO_CLEAN_STREETS:
+            self.everything.sweep_streets()
+            self.frame_sweep_streets = 0
+        else:
+            self.frame_sweep_streets += 1
+
+        if self.frame_empty_bins // FRAME_TO_EMPTY_BINS:
+            self.everything.empty_bins()
+            self.frame_sweep_streets = 0
+        else:
+            self.frame_sweep_streets += 1
 
         if self.buttons:
             for button in self.buttons:

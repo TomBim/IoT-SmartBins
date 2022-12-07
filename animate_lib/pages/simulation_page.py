@@ -100,8 +100,8 @@ class Simulation_Page:
     def draw_trash(self, screen):
         trash_radius = 2
         for t in self.everything._pos_trash_floor:
-            Ax = (t[0]) * PROPORTION - 5 + 10*random.random()
-            Ay = (t[1]) * PROPORTION - 5 + 10*random.random()
+            Ax = (t.get_pos_xy()[0]) * PROPORTION - 5 + 10*random.random()
+            Ay = (t.get_pos_xy()[1]) * PROPORTION - 5 + 10*random.random()
             pygame.draw.circle(screen, BLACK, (Ax, Ay), trash_radius)
 
     def draw_people(self, screen):
@@ -109,10 +109,13 @@ class Simulation_Page:
         for p in self.everything._ppl:
             Ax = (p.get_pos_xy()[0]) * PROPORTION
             Ay = (p.get_pos_xy()[1]) * PROPORTION
-            pygame.draw.circle(screen, BLUE, (Ax, Ay), people_radius)
-            pygame.draw.circle(screen, BLUE, (Ax, Ay), p.get_fov() * PROPORTION, 2)
-            text = self.ppls_font.render(f'{p.get_id()}', False, BLUE)
-            self.screen.blit(text, (Ax,Ay))
+            if p._has_trash:
+                color = BLUE
+            else: color = LIGHT_BLUE
+            pygame.draw.circle(screen, color, (Ax, Ay), people_radius)
+            pygame.draw.circle(screen, color, (Ax, Ay), p.get_fov() * PROPORTION, 2)
+            # text = self.ppls_font.render(f'{p.get_id()}', False, BLUE)
+            # self.screen.blit(text, (Ax,Ay))
 
     
     def draw_trash_counter(self, screen):

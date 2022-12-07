@@ -6,19 +6,11 @@ from default_button import Default_Button
 
 DEFAULT_FONT = pygame.font.SysFont('arial', 20)
 
-import bin_lib.map as map
-import bin_lib.entities as entities
+# import bin_lib.map as map
+# import bin_lib.entities as entities
 import bin_lib.some_functions as fcs
 
-
-FILE_INTERSECTIONS = "bin_lib/intersections.txt"
-FILE_STRETS = "bin_lib/streets.txt"
-FILE_COMMERTIAL_POINTS = ""
-
-TIME_OF_SIMULATION = 3600*365*5
 TIME_STEP = 1
-
-PROPORTION = WIDTH/540
 
 
 def draw_health_bar(surf, pos, size, borderC, backC, healthC, progress):
@@ -33,19 +25,18 @@ def draw_health_bar(surf, pos, size, borderC, backC, healthC, progress):
 class Simulation_Page:
     page_name = "simulation_page"
 
-    def __init__(self, screen, change_screen):
+    def __init__(self, screen, change_screen, map, everything):
         self.background_color = WHITE
         self.screen = screen
 
-        self.mapa = map.read_map(FILE_INTERSECTIONS, FILE_STRETS, FILE_COMMERTIAL_POINTS)
-        self.everything = entities.Everything(self.mapa)
-        fcs.create_rand_com_points(self.mapa, (5,2,4), self.everything)
+        self.mapa = map
+        self.everything = everything
+
+        self.everything.reset()
         fcs.create_rand_bins(self.mapa, self.everything)
 
         self.TRASH_BIN = pygame.image.load('animate_lib/assets/trash_bin.png').convert_alpha()
         self.TRASH_BIN = pygame.transform.scale(self.TRASH_BIN, (20,24))
-
-        self.ppls_font = pygame.font.SysFont('Comic Sans MS', 16)
 
         self.buttons = [
             Default_Button(screen, 50, 50 , 40, 40, DEFAULT_FONT, "x", (150, 150, 150), lambda: change_screen("menu_page")),
@@ -109,14 +100,26 @@ class Simulation_Page:
         for p in self.everything._ppl:
             Ax = (p.get_pos_xy()[0]) * PROPORTION
             Ay = (p.get_pos_xy()[1]) * PROPORTION
-            pygame.draw.circle(screen, BLUE, (Ax, Ay), people_radius)
+            # If impatient, paint RED
+            if ((p._max_time_carrying_trash - p._time_carrying_trash) > 5) or not p.has_trash():
+                color = BLUE
+            else: color = RED
+            # Draw person 
+            pygame.draw.circle(screen, color, (Ax, Ay), people_radius)
+            # Draw person fov when with trash
             if p._has_trash:
-                pygame.draw.circle(screen, BLUE, (Ax, Ay), p.get_fov() * PROPORTION, 2)
-            text = self.ppls_font.render(f'{p.get_id()}', False, BLUE)
-            self.screen.blit(text, (Ax,Ay))
-            pygame.draw.line(screen, GREEN, (Ax, Ay), (p.get_destination().get_pos_xy()[0]*PROPORTION, p.get_destination().get_pos_xy()[1]*PROPORTION), 2)
-            if len(p.get_path()) > 0:
-                pygame.draw.line(screen, BLACK, (Ax, Ay), (p.get_path()[0].get_pos()[0]*PROPORTION, p.get_path()[0].get_pos()[1]*PROPORTION), 1)
+                pygame.draw.circle(screen, color, (Ax, Ay), p.get_fov() * PROPORTION, 2)
+            TOGGLE_PATH_VIEW = True
+            if TOGGLE_PATH_VIEW:
+                # Draw person destination
+                destinX = p.get_destination().get_pos_xy()[0] * PROPORTION
+                destinY = p.get_destination().get_pos_xy()[1] * PROPORTION
+                pygame.draw.line(screen, GREEN, (Ax, Ay), (destinX, destinY), 1)
+                # Draw person next intersection
+                if len(p.get_path()) > 0:
+                    pathX = p.get_path()[0].get_pos()[0] * PROPORTION
+                    pathY = p.get_path()[0].get_pos()[1] * PROPORTION
+                    pygame.draw.line(screen, BLACK, (Ax, Ay), (pathX, pathY), 1)
 
     
     def draw_trash_counter(self, screen):
@@ -133,8 +136,8 @@ class Simulation_Page:
 
         self.draw_streets(self.screen)
         self.draw_intersections(self.screen)
-        
         self.draw_comm_point(self.screen)
+        
         self.draw_bins(self.screen)
         self.draw_trash(self.screen)
         self.draw_people(self.screen)

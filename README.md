@@ -19,6 +19,13 @@ If you are using Linux:
 - in a terminal, type "python3 main_ANIMATE.py" or "python3 main_SIMUL.py".
 
 # animation:
+The animation was made in pygame and it can be started by running the file "main_ANIMATE.py" In the main menu, there are three buttons which you can interact with.
+
+You may start the simulation by pressing the first one. 
+
+You may change the Commercial Points distribution by pressing the second one.
+
+You may exit the program by pressing the third one.
 
 # simulation:
 You can change some parameters from simulation very easily.

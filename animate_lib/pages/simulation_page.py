@@ -151,7 +151,7 @@ class Simulation_Page:
         self.draw_people(self.screen)
         self.draw_trash_counter(self.screen)
 
-        self.everything.update_people(TIME_STEP)
+        self.everything.update_people(TIME_STEP, 0)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
         if self.frame_count_sweep_streets // FRAME_TO_CLEAN_STREETS:
             self.everything.sweep_streets()

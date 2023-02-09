@@ -40,13 +40,14 @@ class Simulation:
         
 
     def run(self):
+        t = 0
         while(True):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-            
-            self.page.update()
+            self.page.update(t)
+            t += 1
             self.clock.tick(FPS)
 
 

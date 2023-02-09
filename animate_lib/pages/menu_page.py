@@ -64,7 +64,7 @@ class Menu_Page:
             pygame.draw.circle(screen, DARK_GRAY, (Ax, Ay), comm_radius)
     
     
-    def update(self):
+    def update(self, time_now):
         pygame.display.update()
         self.screen.fill(self.background_color)
 

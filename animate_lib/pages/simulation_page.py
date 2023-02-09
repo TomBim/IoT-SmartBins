@@ -138,7 +138,7 @@ class Simulation_Page:
     def toggle_view_path(self):
         self.view_path = not self.view_path
             
-    def update(self):
+    def update(self, time_now):
         pygame.display.update()
         self.screen.fill(self.background_color)
 
@@ -151,7 +151,7 @@ class Simulation_Page:
         self.draw_people(self.screen)
         self.draw_trash_counter(self.screen)
 
-        self.everything.update_people(TIME_STEP)
+        self.everything.update_people(TIME_STEP, time_now)
         fcs.create_rand_ppl(self.mapa, self.everything, TIME_STEP)
         if self.frame_count_sweep_streets // FRAME_TO_CLEAN_STREETS:
             self.everything.sweep_streets()

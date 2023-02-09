@@ -51,7 +51,7 @@ class Street:
     def get_length(self) -> float:
         return self._length
 
-    def get_intersctions_ids(self) -> tuple[int, int]:
+    def get_intersections_ids(self) -> tuple[int, int]:
         return self._intersctions_ids
 
     def get_id(self) -> int:
@@ -91,7 +91,7 @@ class Map:
         if A == B:
             return None
         for s in self._streets:
-            (a,b) = s.get_intersctions_ids()
+            (a,b) = s.get_intersections_ids()
             if (a == A or a == B) and (b == A or b == B):
                 return s
         return None

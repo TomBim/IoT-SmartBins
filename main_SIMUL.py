@@ -51,14 +51,14 @@ NUMBER_OF_STEPS = TIME_OF_SIMULATION // TIME_STEP
 # bin2 = np.array([])
 for sims in range(NUMBER_OF_SIMULATIONS):
     filling_rate_average = np.zeros(len(everything.get_bins_list()))
-    # print(NUMBER_OF_STEPS)
     for t in range(NUMBER_OF_STEPS):
-        # print(t)
         time_now = t*TIME_STEP
         everything.update_people(TIME_STEP, time_now)
         fcs.create_rand_ppl(mapa, everything, TIME_STEP)
+
         if ((int)(time_now) % TIME_TO_CLEAN_STREETS) == 0:
             everything.sweep_streets()
+        
         if ((int)(time_now) % TIME_TO_EMPTY_BINS) == 0:
             everything.empty_bins(time_now)
             

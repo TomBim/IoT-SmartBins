@@ -10,7 +10,19 @@ import bin_lib.map as map
 import bin_lib.entities as entities
 from bin_lib.consts import *
 
-def dijkstra(mapa: map.Map, origin: map.Pos_Street):
+def dijkstra(mapa: map.Map, origin: map.Pos_Street) -> list[dict['distance_to_origin': float, 'parent': map.Intersection, 'closed': bool]]:
+    """does Dijkstra starting on 'origin' and calculating the distances to every intersection.
+
+    Args:
+        mapa (map.Map): _description_
+        origin (map.Pos_Street): _description_
+
+    Returns:
+        list[dict['distance_to_origin': float, 'parent': map.Intersection, 'closed': bool]]: dict for each intersection
+            'distance_to_origin': distances from the intersection to 'origin'
+            'parent': the intersection father of this one
+            'closed': used just for control on this function
+    """
     intersections_info = [{'distance_to_origin': inf, 'parent': None, 'closed': False} for _ in mapa.get_intersections_list()]
     pq: list[tuple[float, map.Intersection]] = []
     starting_intersections = origin.get_street().get_vector()
@@ -84,7 +96,7 @@ def search_in_vec(vec: list, value: int) -> int:
 
     Args:
         vec (list): vector in which we will make the search
-        valeu (int): value searched
+        value (int): value searched
 
     Returns:
         int: index of the value searched

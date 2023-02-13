@@ -1,39 +1,142 @@
+from __future__ import annotations
+import numpy as np
+import queue
+import math as m
+import copy
+
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
 from bin_lib.consts import *
-import numpy as np
-import queue
+
 
 class Map_of_Potentials:
-    def __init__(self, mapa: map.Map, n_steps_in_street: int, parent_map: Map_of_Potentials = None):
+    def __init__(self, mapa: map.Map, order: int, map_empty: bool = True,
+                 pot_map: list[np.array] = [], empty_street: list[bool] = []):
+        """Makes deepcopy of pot_map and empty_street if those are given.
+
+        Args:
+            mapa (map.Map): map of the city
+            order (int): order of potential
+            map_empty (bool, optional): is this map of pot empty?. Defaults to True.
+            pot_map (list[np.array], optional): distribution of potential on the map of the city. Defaults to [].
+            empty_street (list[bool], optional): is the street 'i' empty? Defaults to [].
+        """
         self._mapa = mapa
-        self._dim0 = len(mapa.get_streets_list())
-        self._dim1 = n_steps_in_street + 2
-        self._pot_matrix = np.matrix(np.zeros((self._dim0, self._dim1)))
+        self._order = order
+        self._div_size = SIZE_OF_DIVISION[order-1]
+        self._n_streets = len(mapa.get_streets_list())
+
+        if map_empty:
+            self._map_empty = True
+            for i in range(self._n_streets):
+                self._pot_map.append(np.array([]))
+                self._empty_street.append(True)
+        else:
+            self._pot_map: list[np.array] = copy.deepcopy(pot_map)
+            self._empty_street: list[bool] = copy.deepcopy(empty_street)
+            self._map_empty = False
+
+    def __add__(self, y) -> Map_of_Potentials:
+        """Used for helping with Map1+Map2 and returns Map_res whose _pot_map is the sum of
+        both's _pot_map's.
+        It's implemented only (#TODO #2) for same order maps. 
+        CAREFUL: if you do s = x+y, you will lose the reference to old s.
+        OBS: (x+y) is a new map_of_potential, don't need any copy/deepcopy
+
+        Args:
+            y (_type_): should be an instance of Map_of_Potentials (can be subclass)
+
+        Raises:
+            TypeError: if order isn't the same
+            TypeError: if both arguments of the sum aren't Map_of_Potentials
+
+        Returns:
+            Map_of_Potentials: map with the sum of pot_map's
+        """
+        if isinstance(y, Map_of_Potentials):
+            if y.get_order() == self._order:
+                if self.is_map_empty() and y.is_map_empty():
+                    return Map_of_Potentials(self._mapa, self._order)
+                
+                if self.is_map_empty():
+                    return Map_of_Potentials(y._mapa, y._order, False, y._pot_map, y._empty_street)
+                
+                if y.is_map_empty():
+                    return Map_of_Potentials(self._mapa, self._order, False, self._pot_map, self._empty_street)
+                
+                res = Map_of_Potentials(self._mapa, self._order)
+                for s in range(self._n_streets):
+                    x_empty = self._empty_street[s]
+                    y_empty = y._empty_street[s]
+                    if x_empty:
+                        if not y_empty:
+                            res._empty_street[s] = False
+                            res._pot_map[s] = y._pot_map[s]
+                    else:
+                        res._empty_street[s] = False
+                        if y_empty:
+                            res._pot_map[s] = self._pot_map[s]
+                        else:
+                            res._pot_map[s] = self._pot_map[s] + y._pot_map[s]
+                return res
+            else:
+                #TODO: #2 maybe its good to try to do something here
+                raise TypeError('Addition available only for same order')
+        raise TypeError('Addition available only for same type')
+    
+    def __radd__(self, y) -> Map_of_Potentials:
+        return self.__add__(y)
+    
+    def __mul__(self, y) -> Map_of_Potentials:
+        """Helps with a*Map, returning a Map whose _pot_map = a * Map._pot_map.
+        CAREFUL: if you do p = x*y, you will lose the reference to the old p.
+        OBS: don't need any copy/deepcopy, the function creates a new map_of_potential
+
+        Args:
+            y (int/float): must be a scalar
+
+        Raises:
+            TypeError: if y isn't a scalar (int/float)
+
+        Returns:
+            Map_of_Potentials: p._pot_map = y * Map._pot_map (updates booleans too)
+        """
+        if isinstance(y, (int, float)):
+            if y == 0:
+                return Map_of_Potentials(self._mapa, self._order)
+            
+            res = Map_of_Potentials(self._mapa, self._order)
+            for s in range(self._n_streets):
+                if not self._empty_street[s]:
+                    res._pot_map[s] = y * self._pot_map[s]
+                    res._empty_street[s] = False
+            return res
+        raise TypeError('Multiplication available only by scalars, not lists/vectors/others')
+    
+    def __rmul__(self, y) -> Map_of_Potentials:
+        return self.__mul__(y)
+
+    def get_order(self) -> int:
+        return self._order
+
+    def is_map_empty(self) -> bool:
+        return self._map_empty
+
+class Map_of_Pot_One_Order(Map_of_Potentials):
+    def __init__(self, mapa: map.Map, order: int):
+        super().__init__(mapa, order)
+
+    def charge_asking_update(self, diff: Map_of_Potentials):
+        res = self + diff
+        self._pot_map = res._pot_map
+        self._empty_street = res._empty_street
+
+class Map_of_Pot_for_Charges(Map_of_Potentials):
+    def __init__(self, mapa: map.Map, order: int, parent_map: Map_of_Pot_One_Order):
+        super().__init__(mapa, order)
         self._parent_map = parent_map
 
-    def _update_parents(self, add: bool):
-        """Add/subtract this map on/from the parent map (map with the totals).
-        It should be called before (subtract) and after (add) this maps update
-
-        Args:
-            add (bool): add? if false, then it subtracts
-        """
-        if not self._parent_map == None:
-            self._parent_map.son_asking_for_update(add, self._pot_matrix)
-        
-    def son_asking_for_update(self, add: bool, sons_matrix: np.matrix):
-        """Its son is asking to add/subtrat him to/from this map.
-
-        Args:
-            add (bool): add? if false, then it subtracts
-        """
-        if add:
-            self._pot_matrix += sons_matrix
-        else:
-            self._pot_matrix -= sons_matrix
-
-    def update_charge(self, new_charge: float, old_charge: float):
+    def update_charges_value(self, new_q_over_old_q: float):
         """updates the maps (this and its parents) changing the value of the charge.
         If you want to update the position of charge, use update_distances
 
@@ -41,71 +144,139 @@ class Map_of_Potentials:
             new_charge (float): new value of the charge
             old_charge (float): old value of the charge
         """
-        self._update_parents(False)
-        self._pot_matrix = self._pot_matrix * new_charge/old_charge
-        self._update_parents(True)
+        new_map = self * (new_q_over_old_q)
+        diff = self * (new_q_over_old_q - 1)
+        self._pot_map = new_map._pot_map
+        self._parent_map.charge_asking_update(diff)
+        if new_q_over_old_q == 0:
+            self._empty_street = new_map._empty_street
+            self._map_empty = True
 
-    def update_position(self, kq: float, order: int, new_pos_of_charge: map.Pos_Street):
-        """updates this map of potential when the charge moved to another position
+    def update_charges_position(self, q: float, new_pos_of_charge: map.Pos_Street,
+                                intersections_dists: list[float], first_update: bool = False):
+        """updates this map of potential when the charge moved to another position.
+        ATTENTION: the actual division size used here is a little different:
+            n_steps = ceil(street_length / division_size_from_constants  +  1)
+            actual_div_size = street_length / n_steps
 
         Args:
-            kq (float): constant k * charge's value
-            order (int): order of potential
+            q (float): charge's value
             new_pos_of_charge (map.Pos_Street): new position of the charge
+            intersections_dists (list[float]): intersections' distances to the new_pos
+            first_update (bool): this is the first update? (if yes, subtracting from parent isn't necessary)
         """
-        self._update_parents(False)
-        intersections_info = fcs.dijkstra(self._mapa, new_pos_of_charge)
+        if not first_update:
+            old_map = Map_of_Potentials(self._mapa, self._order, self._pot_map, self._empty_street)
 
         # with intersections_info, we can see the distances of the points on the street
-        # remembering: each street will be divided in (n_steps_in_street+1) equal parts
+        max_range = MAXIMAL_RANGE[self._order]
         streets = self._mapa.get_streets_list()
-        for i in range(self._dim0):
+        charges_street = new_pos_of_charge.get_street().get_id()
+        for i in range(self._n_streets):
             s = streets[i]
             (A,B) = s.get_intersections_ids()
 
-            # for each point in this division, update the potential using the
-            # closest intersection
-            division_size = s.get_length() / (self._dim1 - 1)
-            dist_using_A = intersections_info[A]['distance_to_origin']
-            dist_using_B = intersections_info[B]['distance_to_origin'] + s.get_length()
-            for k in range(self._dim1):
-                if dist_using_A < dist_using_B:
-                    self._pot_matrix[i][k] = kq / dist_using_A**order
-                else:
-                    self._pot_matrix[i][k] = kq / dist_using_B**order
-                dist_using_A += division_size
-                dist_using_B -= division_size
+            # is this the street where the charge is?
+            if i == charges_street:
+                # it will start from A to B. Therefore, it subtracts division on A
+                # and sums it on B, always choosing the positive one as the real distance.
+                dist_from_A = intersections_dists[A]
+                dist_from_B = intersections_dists[B] - s.get_length()
+                n_steps = m.ceil(s.get_length() / self._div_size + 1)
+                division_size = s.get_length() / (n_steps-1)
+                dists_this_street = np.zeros(n_steps)
+                for k in range(n_steps):
+                    d = max(dist_from_A, dist_from_B)   # choose the positive one
+                    if d < max_range:
+                        if d < EPSILON:
+                            d = EPSILON
+                        dists_this_street[k] = q / d**self._order                    
+                    dist_from_A -= division_size
+                    dist_from_B += division_size
+                self._pot_map[i] = dists_this_street
+                self._empty_street[i] = False
 
-        self._update_parents(True)                
+            # it isn't the charge's street
+            else:
+                dist_from_A = intersections_dists[A]
+                dist_from_B = intersections_dists[B]
+                
+                # if the entire street is out of the maximal range
+                if dist_from_A > max_range or dist_from_B > max_range:
+                    self._empty_street[i] = True
+                
+                # if the street isn't out of range    
+                else:
+                    # it will start from A, going to B. Therefore, it
+                    # sums division on A and subtracts it from B, always
+                    # choosing the smaller one as the real distance
+                    dist_using_A = dist_from_A
+                    dist_using_B = dist_from_B + s.get_length()
+                    n_steps = m.ceil(s.get_length() / self._div_size + 1)
+                    division_size = s.get_length() / (n_steps-1)
+                    dists_this_street = np.zeros(n_steps)
+                    for k in range(n_steps):
+                        d = min(dist_using_A, dist_from_B)  # chooses the smaller one
+                        if d < max_range:
+                            if d < EPSILON:
+                                d = EPSILON
+                            dists_this_street[k] = q / d**self._order
+                        dist_using_A += division_size
+                        dist_using_B -= division_size
+                    self._empty_street[i] = False
+                    self._pot_map = dists_this_street
+        
+        if first_update:
+            self._parent_map.charge_asking_update(self)
+        else:
+            self._parent_map.charge_asking_update(self - old_map)
 
 class All_Potentials_and_Charges:
-    def __init__(self, mapa: map.Map, n_divs_streets: int) -> None:
+    def __init__(self, mapa: map.Map) -> None:
         self._mapa = mapa
-        self._n_divs_streets = n_divs_streets
         self._list_of_potentials: list[Potential] = []
         self._list_of_potentials_orders: list[int] = []
-        self._map_pot = Map_of_Potentials(mapa, n_divs_streets)
+        self._maps_of_pot_one_order: list[Map_of_Pot_One_Order] = []
 
         self._list_of_charges: list[Pontual_Charge] = []
         self._list_of_charges_ids: list[int] = []
         self._n_charges: int = 0
         self._queue_of_ids_reopen: queue.Queue[int] = queue.Queue()
 
-    def create_potential(self, order: int):
-        #TODO: #1 update maps
-        n_pots = len(self._list_of_potentials_orders)
+        for o in range(MAXIMAL_ORDER):
+            self._create_potential(o+1)
 
-        # if there isn't any potential yet, we can just add it
-        if n_pots == 0:
-            self._list_of_potentials.append(Potential(self._mapa,  self._map_pot, self._n_divs_streets, order))
-            self._list_of_potentials_orders.append(order)
-            return
+    def _create_potentials(self):
+        """Creates the types of potential: V = kq/d^order. order = {1,2,3,...,MAXIMAL_ORDER} Since k is used
+        only for transforming mesure units, it considers k=1.
+
+        Args:
+            order (int): order from kq/d^order
+        """
+        # Don't need any updates on maps since we don't change anything on the charges
+        for o in range(MAXIMAL_ORDER):
+            aux = Potential(self._mapa, o+1)
+            self._list_of_potentials.append(aux)
+            self._list_of_potentials_orders.append(o+1)
+            self._maps_of_pot_one_order.append(aux.get_map_of_pot())
+
+        # n_pots = len(self._list_of_potentials_orders)
+
+        # # if there isn't any potential yet, we can just add it
+        # if n_pots == 0:
+        #     aux = Potential(self._mapa, order)
+        #     self._list_of_potentials.append(aux)
+        #     self._list_of_potentials_orders.append(order)
+        #     self._maps_of_pot_one_order.append(aux.get_map_of_pot())
+        #     return
         
-        # if there is, we have to check if a potential with the same order doesn't already exists
-        index = fcs.search_in_vec(self._list_of_potentials_orders, order)
-        if index >= n_pots or self._list_of_potentials_orders[index] != order:
-            self._list_of_potentials.insert(index, Potential(self._mapa, self._map_pot, self._n_divs_streets, order))
-            self._list_of_potentials_orders.insert(index, order)
+        # # if there is, we have to check if a potential with the same order doesn't already exists
+        # index = fcs.search_in_vec(self._list_of_potentials_orders, order)
+        # if index >= n_pots or self._list_of_potentials_orders[index] != order:
+        #     aux = Potential(self._mapa, order)
+        #     self._list_of_potentials.insert(index, aux)
+        #     self._list_of_potentials_orders.insert(index, order)
+        #     self._maps_of_pot_one_order.insert()
 
     def _get_index_of_potential(self, order: int) -> int:
         """gets the index of the order 'order' potential in the
@@ -135,29 +306,20 @@ class All_Potentials_and_Charges:
             return -index - 1
         return index
         
-    def create_charge(self, q: float, order_of_potential: int, pos: map.Pos_Street) -> int:
-        """create a pontual charge of value 'q' in the positin 'pos'
-        that influentiates on the potential with order 'order_of_potential'
+    def create_charge(self, pos: map.Pos_Street) -> int:
+        """create a pontual charge in the position 'pos'
 
         Args:
-            q (float): value of the charge
-            order_of_potential (int): order of the potential influentiated by the charge
             pos (map.Pos_Street): position of the charge
 
         Returns:
-            int: id of the charge
+            int: id of the charge created
         """
-        #TODO: #1 update maps
+        # Since we don't put any q to this charge, we don't need to update maps
         id = self._next_unused_charges_id()
         index_to_insert = fcs.search_in_vec(self._list_of_charges_ids, id)
-        index_of_pot = self._get_index_of_potential(order_of_potential)
-        if index_of_pot < 0:
-            self.create_potential(order_of_potential)
-            index_of_pot = -(index_of_pot + 1)
-
-        self._list_of_charges.insert(index_to_insert, Pontual_Charge(q, pos, self._mapa, id,
-                                                                     self._list_of_potentials[index_of_pot].get_map_of_pot(),
-                                                                     order_of_potential, self._n_divs_streets))
+        
+        self._list_of_charges.insert(index_to_insert, Pontual_Charge(pos, id, self._mapa, self._maps_of_pot_one_order))
         self._list_of_charges_ids.insert(index_to_insert, id)
 
         self._n_charges += 1
@@ -205,123 +367,150 @@ class All_Potentials_and_Charges:
         #TODO: #1 update maps
         index = self._get_index_of_charge(id)
         if index >= 0:
+            charge = self._list_of_charges[index]
+            charge.set_qs_to_zero()
             self._list_of_charges.pop(index)
             self._list_of_charges_ids.pop(index)
-            self._queue_of_ids_reopen.put(int)
+            self._queue_of_ids_reopen.put(id)
 
     def move_charge(self, id: int, new_pos: map.Pos_Street):
-        pass
+        index = self._get_index_of_charge(id)
+        if index < 0:
+            print('ID not found')
+            return
+        self._list_of_charges[index].move_to(new_pos)
 
 class Potential:
-    def __init__(self, mapa: map.Map, map_of_pot_total: Map_of_Potentials, n_divs_streets: int, order: int):
+    def __init__(self, mapa: map.Map, order: int):
         """We don't need to create a constant since it can be inside the value of the carges (like k*q = Q)
         Args:
             mapa (map.Map): map of the city
-            n_divs_streets (int): exemples:
-                0: updates only intersections
-                3: updates intersections and 0.25, 0.5, 0.75 in the pos_in_street
             order (int): order n of potential from V = k.q/d^n
         """
-        self._pontual_charges: list[Pontual_Charge] = []
-        self._modified_points = []
-        self._n_divs_streets = n_divs_streets
-        self._dist_in_street_step = 1 / (n_divs_streets + 1)
-        self._map_ = mapa
-        self._n_streets = len(mapa.get_streets_list())
-        self._potential_distributed_on_streets = np.zeros([self._n_streets, (n_divs_streets + 2)])
+        self._mapa = mapa
+        self._map_of_pot = Map_of_Pot_One_Order(mapa, order)
         self._order = order
-        self._map_of_pot = Map_of_Potentials(mapa, n_divs_streets, map_of_pot_total)
 
-    def new_charge(self, q, pos_street, mapa, id):
-        self._pontual_charges.append(Pontual_Charge(q, pos_street, mapa, id, self._potential_distributed_on_streets, self._K, self._order, self._n_divs_streets))
-
-
-    def update_distribution_of_potentials(self):
-        for q in self._pontual_charges:
-            q.update(self._n_divs_streets)
-
-    def get_map_of_pot(self) -> Map_of_Potentials:
+    def get_map_of_pot(self) -> Map_of_Pot_One_Order:
         return self._map_of_pot
+    
+    def get_order(self) -> int:
+        return self._order
         
 class Pontual_Charge:
-    def __init__(self, q: float, pos_street: map.Pos_Street, mapa: map.Map, id: int, map_pot_parent: Map_of_Potentials, order: int, n_steps_in_street: int) -> None:
+    def __init__(self, pos_street: map.Pos_Street, id: int, mapa: map.Map) -> None:
         """_summary_
 
         Args:
-            q (float): charge's value
+            qs (float): charges' values for each order (put in same order, pls)
+            orders (int): constants n from kq/d^n
             pos_street (map.Pos_Street): charge's position
-            mapa (map.Map): _description_
             id (int): charge's ID
-            total_pot_matrix (np.array): map of the sum of every charge's potential (just this kind of potential)
-            K (float): constant k from kq/d^n
-            order (int): constant n from kq/d^n
-            n_divisions_each_street (int): exemples:
+            n_divs_street (int): exemples:
                 0: updates only intersections
                 3: updates intersections and 0.25, 0.5, 0.75 in the pos_in_street
+            maps_pot_parent (Map_of_Potentials): maps of the sums of every charge's potentials of order 'orders'
+            mapa (map.Map): city's map
 
         Other private variables:
-            intersections_distance (np.array): vector of the distances from the charge to each intersection
-            need_update_distances (bool): need to update the vector of distances to intersections?
             pot_matrix (np.array): map of this charge's potential
-            need_update_potentials (bool): need to update the charge's potential map?
         """
-        self._q = q
         self._pos_street = pos_street
-        self._map_ = mapa
         self._id = id
-        self._K = K
-        self._order = order
-        self._n_divs_streets = n_steps_in_street
-
-        self._total_pot_matrix = total_pot_matrix
-        self._pot_matrix = np.array([])
-        self._need_update_potentials = True
-
-        self._intersections_distance = []
-        self._need_update_distances = True
+        self._mapa = mapa
         
-        self.update(n_steps_in_street)
+        self._qs: list[float] = []
+        self._orders: list[int] = []
+        self._n_orders = 0
+        self._maps_of_pot: list[Map_of_Pot_for_Charges] = []
+        self._maps_of_pot_parent: list[Map_of_Pot_One_Order] = []
 
-    def set_q(self, new_q: float):
-        self._q = new_q
-        self._need_update_potentials = True
+        self._intersetions_dists: list[float] = []
+        aux = fcs.dijkstra(mapa, pos_street)
+        n_intersecs = len(mapa.get_intersections_list())
+        for i in range(n_intersecs):
+            self._intersetions_dists.append(aux[i]['distance_to_origin'])
 
-    def set_position(self, new_pos_street: map.Pos_Street):
+    def new_order_of_pot(self, q_for_new_order: float, new_order: int, map_of_pot_parent: Map_of_Pot_One_Order):
+        for i in range(self._n_orders):
+            # if already exists this order, it just updates q
+            if self._orders[i] == new_order:
+                self._maps_of_pot[i].update_charges_value(q_for_new_order / self._qs[i])
+                self._qs[i] = q_for_new_order
+                return
+
+        # if doesn't exists, les create it!!!
+        self._qs.append(q_for_new_order)
+        self._orders.append(new_order)
+        self._maps_of_pot_parent.append(map_of_pot_parent)
+
+        aux = Map_of_Pot_for_Charges(self._mapa, new_order, map_of_pot_parent)
+        aux.update_charges_position(q_for_new_order, new_order, self._pos_street, self._intersetions_dists, True)
+        self._maps_of_pot.append(aux)
+
+    def set_q_for_only_one_pot(self, new_q: float, order: int) -> None:
+        # try to find the index on the vectors
+        for i in range(self._n_orders):
+            if self._orders[i] == order:
+                self._maps_of_pot[i].update_charges_value(new_q / self._qs[i])
+                self._qs[i] = new_q
+                return
+
+        # if found: good. Ohterwise, it has to append this order,
+        # but we don't have the map_of_pot_parent. So it will raise an error, for now
+        raise ValueError('It doesnt exist this order')
+    
+    def set_qs(self, new_qs: list[float], orders: list[int]) -> None:
+        for i in range(len(new_qs)):
+            self.set_q_for_only_one_pot(new_qs[i], orders[i])
+
+    def move_to(self, new_pos_street: map.Pos_Street):
+        """It changes the position of the charge to new_pos_street, 
+        updating the maps.
+
+        Args:
+            new_pos_street (map.Pos_Street): the position to which the charge is going
+        """
+        # change pos
         self._pos_street = new_pos_street
+        
+        # update the vector with distances to intersections
+        aux = fcs.dijkstra(self._mapa, new_pos_street)
+        for i in range(len(self._mapa.get_intersections_list())):
+            self._intersetions_dists[i] = aux[i]['distance_to_origin']
 
-    def set_need_update(self, distances: bool, potentials: bool):
-        """You can't set the neediness as false in this function. If you want to do it, use set_updated
+        # update maps of potentials
+        for i in range(len(self._orders)):
+            self._maps_of_pot[i].update_charges_position(self._qs[i], self._orders[i], new_pos_street, self._intersetions_dists)
 
-        Args:
-            distances (bool): set as needing an update on distances?
-            potentials (bool): set as needing an update on potentials?
+    def get_id(self) -> int:
+        return self._id
+
+    def get_orders(self) -> list[int]:
+        """returns all orders. The list is copied, so you can
+        change it at will.
+
+        Returns:
+            list[int]: list of orders (copied, not original)
         """
-        if distances:
-            self._need_update_distances = True
-            self._need_update_potentials = True
-        elif potentials:
-            self._need_update_potentials = True
+        return self._orders.copy()
 
-    def set_updated(self, distances: bool, potentials: bool):
-        """You can't set the neediness as true in this function. If you want to do it, use set_need_update
+    def set_qs_to_zero(self):
+        for i in range(MAXIMAL_ORDER):
+            if self._qs[i] != 0:
+                self._maps_of_pot[i].update_charges_value(0)
 
-        Args:
-            distances (bool): set as distances updated?
-            potentials (bool): set as potentials updated?
-        """
-        if distances:
-            self._need_update_distances = False
-        if potentials:
-            self._need_update_potentials = (False or self._need_update_distances)
-
-    def update(self, n_steps_in_street: int):
-        """update the distances vector and the potentials map if needed
+    def update(self):
+        """DONT USE THIS FUNCION. ITS OLD. update the distances vector and the potentials map if needed
 
         Args:
             n_divisions_each_street (int): exemples:
                 0: updates only intersections
                 3: updates intersections and 0.25, 0.5, 0.75 in the pos_in_street
         """
+        # TODO 3: this is a non-functioning function
+        raise TypeError('Dont use this function, its old')
+    
         # needs update on vector of intersections_distance
         if self._need_update_distances:
             # if it's not initializing, we must take out the values from total matrix b4 continuing

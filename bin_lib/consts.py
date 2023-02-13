@@ -1,6 +1,3 @@
-# epsilons
-EPSILON = 1e-3
-
 # time consts
 MINUTE = 60
 HOUR = 3600
@@ -23,12 +20,19 @@ COST_TRUCK_PER_KM = 15
 COST_TRUCK_PER_DAY = 10
 COST_OF_CLEANING_A_STREET = 10
 
-# consts for potentials
-KE = 1e9
-KG = 6e-6
-
 # Map minimum distance
 EPSILON = 1e-3
 
 # time to update potentials
 TIME_TO_UPDATE_POTS = 1*DAY
+
+
+### FOR POTENTIALS ###
+# division of streets for each order of potential (in meters)
+SIZE_OF_DIVISION = [20, 2, 0.2]
+
+# maximal range for each order of potential (in meters)
+MAXIMAL_RANGE = [1e3, 1e2, 10]
+
+# maximal order of potential
+MAXIMAL_ORDER = 3

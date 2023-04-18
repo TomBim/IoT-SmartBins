@@ -168,7 +168,7 @@ class Person(Entity):
             (A, B) = s.get_vector()
             (Ax, Ay) = A.get_pos()
             (Bx, By) = B.get_pos()
-            if abs(Ax-Bx) > EPSILON: #se nao é reta vertical
+            if abs(Ax-Bx) > EPSILON_DIST: #se nao é reta vertical
                 m = (self._destination_street.get_pos_xy()[0] - start[0])*(Bx-Ax)
                 if m > 0: # apontam no mesmo sentido
                     new_pos_in_street = self._pos_street.get_pos_in_street() + d / s.get_length()
@@ -221,7 +221,7 @@ class Person(Entity):
         (A, B) = s.get_vector()
         (Ax, Ay) = A.get_pos()
         (Bx, By) = B.get_pos()
-        if abs(Ax-Bx) > EPSILON: # se nao é reta vertical
+        if abs(Ax-Bx) > EPSILON_DIST: # se nao é reta vertical
             m = (destin[0] - start[0])*(Bx-Ax)
             if m > 0: #apontam para o mesmo lugar
                 new_pos_in_street = old_pos_in_street + d / s.get_length()
@@ -236,9 +236,9 @@ class Person(Entity):
                 
         # just to be cautious with float problems
         if new_pos_in_street >= 1:
-            new_pos_in_street = 1 - EPSILON
+            new_pos_in_street = 1 - EPSILON_DIST
         elif new_pos_in_street <= 0:
-            new_pos_in_street = EPSILON
+            new_pos_in_street = EPSILON_DIST
         self._pos_street = map.Pos_Street(s, new_pos_in_street)
         return False
 
@@ -277,7 +277,7 @@ class Bin(Entity):
         self._full = False
         self._vol_trash = 0
         self._last_time_was_emptied = -1
-        self._filling_rate = 0 # percentage / s
+        self._filling_rate: float = 0 # percentage / s
 
     def is_full(self):
         return self._full
@@ -315,7 +315,20 @@ class Bin(Entity):
     def get_last_time_was_emptied(self):
         return self._last_time_was_emptied
 
-    def get_filling_rate(self):
+    def get_capacity(self) -> float:
+        """_summary_
+
+        Returns:
+            float: capacity (L)
+        """
+        return self._capacity
+
+    def get_filling_rate(self) -> float:
+        """Gets the filling rate from this bin in %/s
+
+        Returns:
+            float: filling rate in (% / s)
+        """
         return self._filling_rate
 
 class Trash_Potential:

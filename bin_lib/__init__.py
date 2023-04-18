@@ -1,1 +1,1 @@
-__all__ = ["entities", "map", "some_functions"]
+__all__ = ["entities", "map", "some_functions", "potentials"]

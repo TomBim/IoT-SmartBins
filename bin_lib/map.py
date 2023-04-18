@@ -217,19 +217,19 @@ def validate_a_map(mapa: Map) -> bool:
             A0_B = fcs.calculate_distance(A0,B)
             B0_B = fcs.calculate_distance(B0,B)
             # 2 in common
-            if abs(A0_A * A0_B) < EPSILON and abs(B0_A * B0_B) < EPSILON:
+            if abs(A0_A * A0_B) < EPSILON_DIST and abs(B0_A * B0_B) < EPSILON_DIST:
                 return False
             # 0 in common
-            if abs(A0_A * A0_B) > EPSILON and abs(B0_A * B0_B) > EPSILON:
+            if abs(A0_A * A0_B) > EPSILON_DIST and abs(B0_A * B0_B) > EPSILON_DIST:
                 (m,n,r) = fcs.calculate_line_equation(A,B)
                 A0_in_mnr = m*A0x + n*A0y - r
                 B0_in_mnr = m*B0x + n*B0y - r
                 A_in_m0n0r0 = m0*Ax + n0*Ay - r0
                 B_in_m0n0r0 = m0*Bx + n0*By - r0
                 # is there any point from the streets on the line of the other street?
-                if A0_in_mnr * B0_in_mnr < EPSILON or A_in_m0n0r0 * B_in_m0n0r0 < EPSILON:
+                if A0_in_mnr * B0_in_mnr < EPSILON_DIST or A_in_m0n0r0 * B_in_m0n0r0 < EPSILON_DIST:
                     # crossing:
-                    if A0_in_mnr * B0_in_mnr < -EPSILON and A_in_m0n0r0 * B_in_m0n0r0 < -EPSILON:
+                    if A0_in_mnr * B0_in_mnr < -EPSILON_DIST and A_in_m0n0r0 * B_in_m0n0r0 < -EPSILON_DIST:
                         print(f'({i}, {k}) cross')
                         print(f'{i} = ({streets[i].get_vector()[0].get_pos()};{streets[i].get_vector()[1].get_pos()})')
                         print(f'{k} = ({streets[k].get_vector()[0].get_pos()};{streets[k].get_vector()[1].get_pos()})')
@@ -238,15 +238,15 @@ def validate_a_map(mapa: Map) -> bool:
                     # otherwise, there is no problem with crossing or something like that
                     A0_B0 = fcs.calculate_distance(A0,B0)
                     A_B = fcs.calculate_distance(A,B)
-                    if A0_A + A0_B <= A_B + EPSILON or B0_A + B0_B <= A_B + EPSILON or \
-                        A0_A + B0_A <= A0_B0 + EPSILON or A0_B + B0_B <= A0_B0 + EPSILON:
-                        if A0_A + A0_B <= A_B + EPSILON:
+                    if A0_A + A0_B <= A_B + EPSILON_DIST or B0_A + B0_B <= A_B + EPSILON_DIST or \
+                        A0_A + B0_A <= A0_B0 + EPSILON_DIST or A0_B + B0_B <= A0_B0 + EPSILON_DIST:
+                        if A0_A + A0_B <= A_B + EPSILON_DIST:
                             print(f'({A0} inside ({A};{B})')
-                        if B0_A + B0_B <= A_B + EPSILON:
+                        if B0_A + B0_B <= A_B + EPSILON_DIST:
                             print(f'({B0} inside ({A};{B})')
-                        if A0_A + B0_A <= A0_B0 + EPSILON:
+                        if A0_A + B0_A <= A0_B0 + EPSILON_DIST:
                             print(f'({A} inside ({A0};{B0})')
-                        if A0_B + B0_B <= A0_B0 + EPSILON:
+                        if A0_B + B0_B <= A0_B0 + EPSILON_DIST:
                             print(f'({B} inside ({A0};{B0})')
                         return False
 

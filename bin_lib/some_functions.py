@@ -332,7 +332,7 @@ def create_rand_com_points(mapa: map.Map, weight_for_com_points: tuple[int], eve
         
         # generate random position
         street = streets[rand.randrange(n_streets)]
-        rand_pos_street = map.Pos_Street(street, EPSILON + (1-2*EPSILON)*rand.random())
+        rand_pos_street = map.Pos_Street(street, EPSILON_DIST + (1-2*EPSILON_DIST)*rand.random())
 
         # put in the vector
         customer_potential = rand.random()

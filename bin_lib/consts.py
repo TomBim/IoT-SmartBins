@@ -20,8 +20,10 @@ COST_TRUCK_PER_KM = 15
 COST_TRUCK_PER_DAY = 10
 COST_OF_CLEANING_A_STREET = 10
 
-# Map minimum distance
-EPSILON = 1e-3
+# epsilons
+EPSILON_DIST = 1e-3
+EPSILON_POT = 1e-20
+EPSILON_CHARGE = 1e-10 
 
 # time to update potentials
 TIME_TO_UPDATE_POTS = 1*DAY

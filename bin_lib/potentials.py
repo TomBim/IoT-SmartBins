@@ -6,6 +6,7 @@ import copy
 
 import bin_lib.map as map
 import bin_lib.some_functions as fcs
+import bin_lib.entities as entities
 from bin_lib.consts import *
 
 
@@ -41,6 +42,7 @@ class Map_of_Potentials:
         both's _pot_map's.
         It's implemented only (#TODO #2) for same order maps. 
         CAREFUL: if you do s = x+y, you will lose the reference to old s.
+        CAREFUL: this function considers EPSILON_POT. Therefore, it goes to zero if a sum < EPSILON_POT
         OBS: (x+y) is a new map_of_potential, don't need any copy/deepcopy
 
         Args:
@@ -54,7 +56,9 @@ class Map_of_Potentials:
             Map_of_Potentials: map with the sum of pot_map's
         """
         if isinstance(y, Map_of_Potentials):
+            # if they are from the same order of potential
             if y.get_order() == self._order:
+                # if any of them is empty, it's trivial
                 if self.is_map_empty() and y.is_map_empty():
                     return Map_of_Potentials(self._mapa, self._order)
                 
@@ -64,20 +68,33 @@ class Map_of_Potentials:
                 if y.is_map_empty():
                     return Map_of_Potentials(self._mapa, self._order, False, self._pot_map, self._empty_street)
                 
+                # if none of them is empty, let's calculate it!!
                 res = Map_of_Potentials(self._mapa, self._order)
                 for s in range(self._n_streets):
                     x_empty = self._empty_street[s]
                     y_empty = y._empty_street[s]
                     if x_empty:
                         if not y_empty:
-                            res._empty_street[s] = False
                             res._pot_map[s] = y._pot_map[s]
+                            res._empty_street[s] = False
                     else:
-                        res._empty_street[s] = False
                         if y_empty:
                             res._pot_map[s] = self._pot_map[s]
+                            res._empty_street[s] = False
                         else:
-                            res._pot_map[s] = self._pot_map[s] + y._pot_map[s]
+                            # After making the sum, we need to see,
+                            # if the result doesn't empty any street.
+                            # Since empting street is good for performance,
+                            # we don't need to change the not empty streets
+                            aux = self._pot_map[s] + y._pot_map[s]
+                            if np.allclose(aux, 0, atol=EPSILON_POT):
+                                res._pot_map[s] = 0*aux
+                                res._empty_street[s] = True
+                            else:
+                                res._pot_map[s] = aux
+                                res._empty_street[s] = False
+                    if np.all(res._empty_street):
+                        res._map_empty = True
                 return res
             else:
                 #TODO: #2 maybe its good to try to do something here
@@ -91,6 +108,9 @@ class Map_of_Potentials:
         """Helps with a*Map, returning a Map whose _pot_map = a * Map._pot_map.
         CAREFUL: if you do p = x*y, you will lose the reference to the old p.
         OBS: don't need any copy/deepcopy, the function creates a new map_of_potential
+        OBS: it doesn't consider EPSILON_POT. If you want to, do it after. But in case of
+            updating charge's value, it isn't so cool, because you will lose information
+            and won't be able to just multiply by new_q/old_q
 
         Args:
             y (int/float): must be a scalar
@@ -121,40 +141,87 @@ class Map_of_Potentials:
 
     def is_map_empty(self) -> bool:
         return self._map_empty
+    
+    def _clear_map(self):
+        empty_map = Map_of_Potentials(self._mapa, self._order)
+        self._pot_map = empty_map._pot_map
+        self._empty_street = empty_map._empty_street
+        self._map_empty = True
 
 class Map_of_Pot_One_Order(Map_of_Potentials):
     def __init__(self, mapa: map.Map, order: int):
+        """Each order of potential has its own map, so it's easier to
+        update and make sums, subtractions etc.
+
+        Args:
+            mapa (map.Map): map of the city
+            order (int): order of the potential represented by this map
+        """
         super().__init__(mapa, order)
 
     def charge_asking_update(self, diff: Map_of_Potentials):
+        """Updates this map of potential considering only the difference
+        to add (diff map = new charges' map - old charges' map).
+
+        Args:
+            diff (Map_of_Potentials): _description_
+        """
         res = self + diff
         self._pot_map = res._pot_map
         self._empty_street = res._empty_street
+        self._map_empty = res._map_empty
 
 class Map_of_Pot_for_Charges(Map_of_Potentials):
-    def __init__(self, mapa: map.Map, order: int, parent_map: Map_of_Pot_One_Order):
+    def __init__(self, mapa: map.Map, order: int, parent_map: Map_of_Pot_One_Order, intersections_dists: np.array,
+                 pos_of_charge: map.Pos_Street):
+        """Each charge has its own maps: one for each order. That way, it's easier to update when 
+        we change the charge's value or we move it, etc.
+
+        Args:
+            mapa (map.Map): map of the city
+            order (int): order which this map represents
+            parent_map (Map_of_Pot_One_Order): map of pot of the same order
+            pos_of_charge (map.Pos_Street): position of the charge
+        """
         super().__init__(mapa, order)
         self._parent_map = parent_map
+        self._intersections_dists = intersections_dists
+        self._pos = pos_of_charge
 
-    def update_charges_value(self, new_q_over_old_q: float):
-        """updates the maps (this and its parents) changing the value of the charge.
+    def update_charges_value(self, new_q: float, old_q: float):
+        """FOR FIRST UPDATE, USE first_update function.
+        updates the maps (this and its parents) changing the value of the charge.
         If you want to update the position of charge, use update_distances
 
         Args:
             new_charge (float): new value of the charge
             old_charge (float): old value of the charge
         """
-        new_map = self * (new_q_over_old_q)
-        diff = self * (new_q_over_old_q - 1)
+        # if map was empty, then need to calculates the distances
+        if old_q == 0 or self._map_empty:
+            self.first_update(new_q, self._pos)
+            return
+        
+        # if new_q is less than EPSILON_CHARGE, then we put 0, so the map stay empty
+        if abs(new_q) < EPSILON_CHARGE:
+            new_q = 0
+        
+        # updating
+        ratio = new_q / old_q
+        new_map = self * ratio
+        diff = self * (ratio - 1)
         self._pot_map = new_map._pot_map
         self._parent_map.charge_asking_update(diff)
-        if new_q_over_old_q == 0:
+
+        # if new_q == 0, we need to make the map empty
+        if ratio == 0:
             self._empty_street = new_map._empty_street
             self._map_empty = True
 
     def update_charges_position(self, q: float, new_pos_of_charge: map.Pos_Street,
-                                intersections_dists: list[float], first_update: bool = False):
-        """updates this map of potential when the charge moved to another position.
+                                first_update: bool = False):
+        """FOR FIRST UPDATE, USE first_update function.
+        updates this map of potential when the charge moved to another position.
         ATTENTION: the actual division size used here is a little different:
             n_steps = ceil(street_length / division_size_from_constants  +  1)
             actual_div_size = street_length / n_steps
@@ -163,12 +230,16 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
             q (float): charge's value
             new_pos_of_charge (map.Pos_Street): new position of the charge
             intersections_dists (list[float]): intersections' distances to the new_pos
-            first_update (bool): this is the first update? (if yes, subtracting from parent isn't necessary)
+            first_update (bool): this is the first update? (if yes, subtracting from parent isn't necessary).
+                For first update, it's better using first_update function. The first_update function uses this
+                function, that's why we have this bool. But it's not recomended to call this fction for first
+                updates, because the fction can be changed.
         """
+        self._pos = new_pos_of_charge
         if not first_update:
-            old_map = Map_of_Potentials(self._mapa, self._order, self._pot_map, self._empty_street)
+            old_map = Map_of_Potentials(self._mapa, self._order, False, self._pot_map, self._empty_street)
 
-        # with intersections_info, we can see the distances of the points on the street
+        # with intersections_dists, we can see the distances of the points on the street
         max_range = MAXIMAL_RANGE[self._order]
         streets = self._mapa.get_streets_list()
         charges_street = new_pos_of_charge.get_street().get_id()
@@ -180,16 +251,16 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
             if i == charges_street:
                 # it will start from A to B. Therefore, it subtracts division on A
                 # and sums it on B, always choosing the positive one as the real distance.
-                dist_from_A = intersections_dists[A]
-                dist_from_B = intersections_dists[B] - s.get_length()
+                dist_from_A = self._intersections_dists[A]
+                dist_from_B = self._intersections_dists[B] - s.get_length()
                 n_steps = m.ceil(s.get_length() / self._div_size + 1)
                 division_size = s.get_length() / (n_steps-1)
                 dists_this_street = np.zeros(n_steps)
                 for k in range(n_steps):
                     d = max(dist_from_A, dist_from_B)   # choose the positive one
                     if d < max_range:
-                        if d < EPSILON:
-                            d = EPSILON
+                        if d < EPSILON_DIST:
+                            d = EPSILON_DIST
                         dists_this_street[k] = q / d**self._order                    
                     dist_from_A -= division_size
                     dist_from_B += division_size
@@ -198,8 +269,8 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
 
             # it isn't the charge's street
             else:
-                dist_from_A = intersections_dists[A]
-                dist_from_B = intersections_dists[B]
+                dist_from_A = self._intersections_dists[A]
+                dist_from_B = self._intersections_dists[B]
                 
                 # if the entire street is out of the maximal range
                 if dist_from_A > max_range or dist_from_B > max_range:
@@ -218,8 +289,8 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
                     for k in range(n_steps):
                         d = min(dist_using_A, dist_from_B)  # chooses the smaller one
                         if d < max_range:
-                            if d < EPSILON:
-                                d = EPSILON
+                            if d < EPSILON_DIST:
+                                d = EPSILON_DIST
                             dists_this_street[k] = q / d**self._order
                         dist_using_A += division_size
                         dist_using_B -= division_size
@@ -230,24 +301,31 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
             self._parent_map.charge_asking_update(self)
         else:
             self._parent_map.charge_asking_update(self - old_map)
+      
+    def first_update(self, q: float, pos_of_charge: map.Pos_Street):
+        self.update_charges_position(q, pos_of_charge, True)
 
 class All_Potentials_and_Charges:
     def __init__(self, mapa: map.Map) -> None:
+        """Concentrates everything concerning potentials: every map of potential,
+        every charge, potentials' orders, etc.
+
+        Args:
+            mapa (map.Map): map of the city
+        """
         self._mapa = mapa
         self._list_of_potentials: list[Potential] = []
         self._list_of_potentials_orders: list[int] = []
         self._maps_of_pot_one_order: list[Map_of_Pot_One_Order] = []
+        self._create_potentials()
 
         self._list_of_charges: list[Pontual_Charge] = []
         self._list_of_charges_ids: list[int] = []
         self._n_charges: int = 0
         self._queue_of_ids_reopen: queue.Queue[int] = queue.Queue()
 
-        for o in range(MAXIMAL_ORDER):
-            self._create_potential(o+1)
-
     def _create_potentials(self):
-        """Creates the types of potential: V = kq/d^order. order = {1,2,3,...,MAXIMAL_ORDER} Since k is used
+        """Creates the types of potential: V = kq/d^order, order = {1,2,3,...,MAXIMAL_ORDER}. Since k is used
         only for transforming mesure units, it considers k=1.
 
         Args:
@@ -307,7 +385,7 @@ class All_Potentials_and_Charges:
         return index
         
     def create_charge(self, pos: map.Pos_Street) -> int:
-        """create a pontual charge in the position 'pos'
+        """creates a pontual charge in the position 'pos'
 
         Args:
             pos (map.Pos_Street): position of the charge
@@ -363,8 +441,12 @@ class All_Potentials_and_Charges:
             return -index - 1
         return index
 
-    def remove_charge(self, id):
-        #TODO: #1 update maps
+    def remove_charge(self, id: int):
+        """Deletes the charge 'id'
+
+        Args:
+            id (int): id of the charge to be deleted
+        """
         index = self._get_index_of_charge(id)
         if index >= 0:
             charge = self._list_of_charges[index]
@@ -374,6 +456,12 @@ class All_Potentials_and_Charges:
             self._queue_of_ids_reopen.put(id)
 
     def move_charge(self, id: int, new_pos: map.Pos_Street):
+        """Moves the charge 'id' to a new position (new_pos) in the map.
+
+        Args:
+            id (int): id of the carge to be moved
+            new_pos (map.Pos_Street): position to where charge goes
+        """
         index = self._get_index_of_charge(id)
         if index < 0:
             print('ID not found')
@@ -382,7 +470,9 @@ class All_Potentials_and_Charges:
 
 class Potential:
     def __init__(self, mapa: map.Map, order: int):
-        """We don't need to create a constant since it can be inside the value of the carges (like k*q = Q)
+        """Represents the Potential of order 'order'. 
+        We don't need to create a constant since it can be inside the value of the carges (like k*q = Q).
+
         Args:
             mapa (map.Map): map of the city
             order (int): order n of potential from V = k.q/d^n
@@ -399,13 +489,14 @@ class Potential:
         
 class Pontual_Charge:
     def __init__(self, pos_street: map.Pos_Street, id: int, mapa: map.Map) -> None:
-        """_summary_
+        """Model for each pontual charge, considering every type of charge.
+        Therefore, this pontual charge has a specific value of charge for each order.
 
         Args:
             qs (float): charges' values for each order (put in same order, pls)
             orders (int): constants n from kq/d^n
             pos_street (map.Pos_Street): charge's position
-            id (int): charge's ID
+            id (int): charge's ID (used to identify this 'object')
             n_divs_street (int): exemples:
                 0: updates only intersections
                 3: updates intersections and 0.25, 0.5, 0.75 in the pos_in_street
@@ -414,6 +505,7 @@ class Pontual_Charge:
 
         Other private variables:
             pot_matrix (np.array): map of this charge's potential
+            intersections_dists (np.array): distance to each intersection
         """
         self._pos_street = pos_street
         self._id = id
@@ -425,11 +517,12 @@ class Pontual_Charge:
         self._maps_of_pot: list[Map_of_Pot_for_Charges] = []
         self._maps_of_pot_parent: list[Map_of_Pot_One_Order] = []
 
-        self._intersetions_dists: list[float] = []
+        # store the distance from charge to each intersection
+        self._intersetions_dists = np.array([])
         aux = fcs.dijkstra(mapa, pos_street)
         n_intersecs = len(mapa.get_intersections_list())
         for i in range(n_intersecs):
-            self._intersetions_dists.append(aux[i]['distance_to_origin'])
+            np.append(self._intersetions_dists, aux[i]['distance_to_origin'])
 
     def new_order_of_pot(self, q_for_new_order: float, new_order: int, map_of_pot_parent: Map_of_Pot_One_Order):
         for i in range(self._n_orders):
@@ -444,20 +537,21 @@ class Pontual_Charge:
         self._orders.append(new_order)
         self._maps_of_pot_parent.append(map_of_pot_parent)
 
-        aux = Map_of_Pot_for_Charges(self._mapa, new_order, map_of_pot_parent)
-        aux.update_charges_position(q_for_new_order, new_order, self._pos_street, self._intersetions_dists, True)
+        # creating map of pot for this order
+        aux = Map_of_Pot_for_Charges(self._mapa, new_order, map_of_pot_parent, self._intersetions_dists)
+        aux.first_update(q_for_new_order, self._pos_street)
         self._maps_of_pot.append(aux)
 
     def set_q_for_only_one_pot(self, new_q: float, order: int) -> None:
         # try to find the index on the vectors
         for i in range(self._n_orders):
             if self._orders[i] == order:
-                self._maps_of_pot[i].update_charges_value(new_q / self._qs[i])
+                self._maps_of_pot[i].update_charges_value(new_q, self._qs[i])
                 self._qs[i] = new_q
                 return
 
         # if found: good. Ohterwise, it has to append this order,
-        # but we don't have the map_of_pot_parent. So it will raise an error, for now
+        # but we don't have the map_of_pot_parent. So it will raise an error, for now #TODO #5
         raise ValueError('It doesnt exist this order')
     
     def set_qs(self, new_qs: list[float], orders: list[int]) -> None:
@@ -481,7 +575,7 @@ class Pontual_Charge:
 
         # update maps of potentials
         for i in range(len(self._orders)):
-            self._maps_of_pot[i].update_charges_position(self._qs[i], self._orders[i], new_pos_street, self._intersetions_dists)
+            self._maps_of_pot[i].update_charges_position(self._qs[i], new_pos_street)
 
     def get_id(self) -> int:
         return self._id
@@ -496,11 +590,12 @@ class Pontual_Charge:
         return self._orders.copy()
 
     def set_qs_to_zero(self):
-        for i in range(MAXIMAL_ORDER):
-            if self._qs[i] != 0:
-                self._maps_of_pot[i].update_charges_value(0)
+        """Set all the charges to zero. Already updating maps.
+        """
+        for order in range(MAXIMAL_ORDER):
+            self.set_q_for_only_one_pot(0, order)
 
-    def update(self):
+    def _update(self):
         """DONT USE THIS FUNCION. ITS OLD. update the distances vector and the potentials map if needed
 
         Args:
@@ -546,8 +641,8 @@ class Pontual_Charge:
                         x = d0 - k*dist_step
                         y = d1 - (k_max-k)*dist_step
                         d = x if x>0 else y
-                        if d < EPSILON:
-                            d = EPSILON
+                        if d < EPSILON_DIST:
+                            d = EPSILON_DIST
                         m_pot_self[i,k] = d**self._order
                 # general case: the distance inside a street is the smaller distance
                 # (from the point in street to an intersection) + (from the intersection to the charge)
@@ -562,8 +657,8 @@ class Pontual_Charge:
                         x = d0 + k*dist_step
                         y = d1 + (k_max-k)*dist_step
                         d = x if x<y else y
-                        if d < EPSILON:
-                            d = EPSILON
+                        if d < EPSILON_DIST:
+                            d = EPSILON_DIST
                         m_pot_self[i,k] = d**self._order
             self._pot_matrix = self._K * self._q / m_pot_self
             self._need_update_potentials = False
@@ -577,7 +672,7 @@ class Pontual_Charge:
 
             # calculate old K*q
             d = self._intersections_distance[self._map_.get_street(0).get_intersections_ids()[0]]
-            if d > EPSILON:
+            if d > EPSILON_DIST:
                 old_Kq = self._pot_matrix[0,0] * d**self._order
             else:
                 d = self._intersections_distance[self._map_.get_street(0).get_intersections_ids()[1]]
@@ -587,3 +682,8 @@ class Pontual_Charge:
             self._pot_matrix = self._pot_matrix  * (self._K * self._q / old_Kq)
             self._need_update_potentials = False
             self._total_pot_matrix += self._pot_matrix
+
+def Pot_Analyer(mapa: map.Map, all_pots_and_charges: All_Potentials_and_Charges, everything: entities.Everything):
+    bins_list = everything.get_bins_list()
+    for bin in bins_list:
+        bin.get_filling_rate() * bin.get_capacity()

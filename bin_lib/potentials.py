@@ -729,8 +729,3 @@ class Pontual_Charge:
             self._pot_matrix = self._pot_matrix  * (self._K * self._q / old_Kq)
             self._need_update_potentials = False
             self._total_pot_matrix += self._pot_matrix
-
-def Pot_Analyer(mapa: map.Map, all_pots_and_charges: All_Pots_and_Charges, everything: entities.Everything):
-    bins_list = everything.get_bins_list()
-    for bin in bins_list:
-        bin.get_filling_rate() * bin.get_capacity()

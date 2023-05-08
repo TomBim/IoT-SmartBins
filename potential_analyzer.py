@@ -62,4 +62,5 @@ class Trash_Reports:
     
 
 def pot_analyzer(bins_pot: pot.All_Pots_and_Charges, coms_pot: pot.All_Pots_and_Charges,
-                 reps: Trash_Reports)
+                 reps: Trash_Reports):
+    pass

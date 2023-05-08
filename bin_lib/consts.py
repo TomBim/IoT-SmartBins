@@ -6,8 +6,8 @@ MONTH = 30*DAY
 YEAR = 365*DAY
 
 # bins/streets are emptied/cleaned once each:
-TIME_TO_EMPTY_BINS = 3*DAY
-TIME_TO_CLEAN_STREETS = 3*DAY
+PERIOD_EMPTY_BINS = 3*DAY
+PERIOD_CLEAN_STREETS = 3*DAY
 
 # minimal percentage of a bin to get emptied by a truck:
 MIN_PERCENTAGE_BIN = 0.50
@@ -38,3 +38,6 @@ MAXIMAL_RANGE = [1e3, 1e2, 10]
 
 # maximal order of potential
 MAXIMAL_ORDER = 3
+
+# weight of street sweeper opinion on reports
+STR_SWEEPER_WEIGHT = 10

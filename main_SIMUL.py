@@ -56,10 +56,10 @@ for sims in range(NUMBER_OF_SIMULATIONS):
         everything.update_people(TIME_STEP, time_now)
         fcs.create_rand_ppl(mapa, everything, TIME_STEP)
 
-        if ((int)(time_now) % TIME_TO_CLEAN_STREETS) == 0:
+        if ((int)(time_now) % PERIOD_CLEAN_STREETS) == 0:
             everything.sweep_streets()
         
-        if ((int)(time_now) % TIME_TO_EMPTY_BINS) == 0:
+        if ((int)(time_now) % PERIOD_EMPTY_BINS) == 0:
             everything.empty_bins(time_now)
             
             for i in range(1,len(everything.get_bins_list())):

@@ -40,7 +40,8 @@ class Map_of_Potentials:
     def __add__(self, y) -> Map_of_Potentials:
         """Used for helping with Map1+Map2 and returns Map_res whose _pot_map is the sum of
         both's _pot_map's.
-        It's implemented only (#TODO #2) for same order maps. 
+        In the case of different orders, it uses the functions "interpolate(new_order)" to let both maps
+        with the same shape.
         CAREFUL: if you do s = x+y, you will lose the reference to old s.
         CAREFUL: this function considers EPSILON_POT. Therefore, it goes to zero if a sum < EPSILON_POT
         OBS: (x+y) is a new map_of_potential, don't need any copy/deepcopy
@@ -56,19 +57,19 @@ class Map_of_Potentials:
             Map_of_Potentials: map with the sum of pot_map's
         """
         if isinstance(y, Map_of_Potentials):
+            # if any of them is empty, it's trivial
+            if self.is_map_empty() and y.is_map_empty():
+                return Map_of_Potentials(self._mapa, self._order)
+            
+            if self.is_map_empty():
+                return Map_of_Potentials(y._mapa, y._order, False, y._pot_map, y._empty_street)
+            
+            if y.is_map_empty():
+                return Map_of_Potentials(self._mapa, self._order, False, self._pot_map, self._empty_street)
+            
+            # if none of them is empty, let's calculate it!!!
             # if they are from the same order of potential
             if y.get_order() == self._order:
-                # if any of them is empty, it's trivial
-                if self.is_map_empty() and y.is_map_empty():
-                    return Map_of_Potentials(self._mapa, self._order)
-                
-                if self.is_map_empty():
-                    return Map_of_Potentials(y._mapa, y._order, False, y._pot_map, y._empty_street)
-                
-                if y.is_map_empty():
-                    return Map_of_Potentials(self._mapa, self._order, False, self._pot_map, self._empty_street)
-                
-                # if none of them is empty, let's calculate it!!
                 res = Map_of_Potentials(self._mapa, self._order)
                 for s in range(self._n_streets):
                     x_empty = self._empty_street[s]
@@ -96,9 +97,16 @@ class Map_of_Potentials:
                     if np.all(res._empty_street):
                         res._map_empty = True
                 return res
+            # if its not the same order
             else:
-                #TODO: #2 maybe its good to try to do something here
-                raise TypeError('Addition available only for same order')
+                # we need to interpolate the lower order, so we can make the sum
+                if y.get_order() < self._order:
+                    a = self
+                    b = y.interpolate(self._order)
+                else:
+                    a = self.interpolate(y.get_order())
+                    b = y
+                return a+b
         raise TypeError('Addition available only for same type')
     
     def __radd__(self, y) -> Map_of_Potentials:
@@ -147,6 +155,44 @@ class Map_of_Potentials:
         self._pot_map = empty_map._pot_map
         self._empty_street = empty_map._empty_street
         self._map_empty = True
+    
+    def get_n_steps(self, street: map.Street) -> int:
+        """returns the number of steps in a specific street. It does it using the SIZE_OF_DIVISION
+        from the order of the map. Counts the point 0.
+
+        Args:
+            street (map.Street): the street whose n_steps you want
+
+        Returns:
+            int: number of steps in the street (counting the zero)
+        """
+        return m.ceil(street.get_length() / self._div_size) + 1
+
+    def interpolate(self, new_order) -> Map_of_Potentials:
+        interpol = Map_of_Potentials(self._mapa, new_order)
+        if not self._map_empty:
+            interpol._map_empty = False
+            streets = self._mapa.get_streets_list()
+            for i in range(self._n_streets):
+                if not self._empty_street[i]:
+                    interpol._empty_street[i] = False
+                    s = streets[i]
+                    n_steps_higher = interpol.get_n_steps(s)
+                    n_steps_lower = self.get_n_steps(s)
+                    ratio = n_steps_higher / n_steps_lower
+                    step_lower = -1
+                    for step_higher in range(n_steps_higher):
+                        # let's make "mean = a*x + b"
+                        if not step_lower == step_higher // ratio:
+                            step_lower = step_higher // ratio
+                            a = self._pot_map[i][step_lower+1] - self._pot_map[i][step_lower]
+                            b = self._pot_map[i][step_lower]
+                        mean = a * (step_higher % ratio) + b
+                        if abs(mean) < EPSILON_POT:
+                            mean = 0
+                        interpol._pot_map[i][step_higher] = mean
+        return interpol
+                    
 
 class Map_of_Pot_One_Order(Map_of_Potentials):
     def __init__(self, mapa: map.Map, order: int):
@@ -253,7 +299,7 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
                 # and sums it on B, always choosing the positive one as the real distance.
                 dist_from_A = self._intersections_dists[A]
                 dist_from_B = self._intersections_dists[B] - s.get_length()
-                n_steps = m.ceil(s.get_length() / self._div_size + 1)
+                n_steps = self.get_n_steps(s)
                 division_size = s.get_length() / (n_steps-1)
                 dists_this_street = np.zeros(n_steps)
                 for k in range(n_steps):
@@ -283,7 +329,7 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
                     # choosing the smaller one as the real distance
                     dist_using_A = dist_from_A
                     dist_using_B = dist_from_B + s.get_length()
-                    n_steps = m.ceil(s.get_length() / self._div_size + 1)
+                    n_steps = self.get_n_steps(s)
                     division_size = s.get_length() / (n_steps-1)
                     dists_this_street = np.zeros(n_steps)
                     for k in range(n_steps):
@@ -305,10 +351,11 @@ class Map_of_Pot_for_Charges(Map_of_Potentials):
     def first_update(self, q: float, pos_of_charge: map.Pos_Street):
         self.update_charges_position(q, pos_of_charge, True)
 
-class All_Potentials_and_Charges:
+class All_Pots_and_Charges:
     def __init__(self, mapa: map.Map) -> None:
         """Concentrates everything concerning potentials: every map of potential,
         every charge, potentials' orders, etc.
+        You can use 2 objects of this class if you want separate trash generators from trash getters
 
         Args:
             mapa (map.Map): map of the city
@@ -683,7 +730,7 @@ class Pontual_Charge:
             self._need_update_potentials = False
             self._total_pot_matrix += self._pot_matrix
 
-def Pot_Analyer(mapa: map.Map, all_pots_and_charges: All_Potentials_and_Charges, everything: entities.Everything):
+def Pot_Analyer(mapa: map.Map, all_pots_and_charges: All_Pots_and_Charges, everything: entities.Everything):
     bins_list = everything.get_bins_list()
     for bin in bins_list:
         bin.get_filling_rate() * bin.get_capacity()

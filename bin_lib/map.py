@@ -61,14 +61,21 @@ class Street:
 class Map:
     def __init__(self):
         self._intersections: list[Intersection] = []
+        self._n_intersecs: int = 0
         self._streets: list[Street] = []
+        self._adj_matrix: np.matrix = np.matrix([])
 
     def add_intersection(self, x: float, y: float):
         self._intersections.append(Intersection(len(self._intersections),x,y))
+        self._adj_matrix = np.column_stack((self._adj_matrix,np.zeros(self._n_intersecs)))
+        self._n_intersecs += 1
+        self._adj_matrix.resize((self._n_intersecs,self._n_intersecs),refcheck=False)        
 
     def add_street(self, indexA: int, indexB: int):
         new_street = Street(self._intersections[indexA], self._intersections[indexB], len(self._streets))
         self._streets.append(new_street)
+        self._adj_matrix[indexA][indexB] = new_street.get_length()
+        self._adj_matrix[indexB][indexA] = new_street.get_length()
 
     def get_intersections_list(self) -> list[Intersection]:
         """CAREFUL: the elements in the list are the original ones"""
@@ -96,6 +103,14 @@ class Map:
             if (a == A or a == B) and (b == A or b == B):
                 return s
         return None
+    
+    def get_adj_matrix(self) -> np.matrix:
+        """Returns a COPY of the adjance matrix.
+
+        Returns:
+            np.matrix: copy of adjance matrix
+        """
+        return self._adj_matrix.copy()
 
             
 

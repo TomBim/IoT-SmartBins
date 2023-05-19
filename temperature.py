@@ -75,6 +75,11 @@ class HFMap_One_Source(Heat_Flux_Map):
         self._total_map = total_map
 
     def refresh(self):
+        # TODO: its really wrong. In this, I considered the other sources as open circuits,
+        # when I should have considered as short circuits. BUT, this makes this model very
+        # expensive for computing (matrix just got double sized, I think, multiplying the number
+        # of calculations by 4. Even worse: we need to invert the matrix, soooo... this model
+        # probably doesn't pay off)
         if self._gnd == None:
             return
 

@@ -267,6 +267,7 @@ class Bin(Entity):
         pos_street: [street,float]
         capacity: float (L)
         filling_rate: float (L/s)
+        filling_rates_mean: [sum of filling rates (%/s), n filling rates]. Mean = [0] / [1]
         full: bool
         vol_trash: float (L)
         last_time_was_emptied: int (seconds)
@@ -277,7 +278,8 @@ class Bin(Entity):
         self._full = False
         self._vol_trash = 0
         self._last_time_was_emptied = -1
-        self._filling_rate: float = 0 # percentage / s
+        self._filling_rate_last: float = 0 # percentage / s
+        self._filling_rates_mean: list[float,int] = [0,0] # [percentage / s, number used for mean]
 
     def is_full(self):
         return self._full
@@ -289,8 +291,8 @@ class Bin(Entity):
         self._vol_trash += vol_trash
         if(self._vol_trash > self._capacity):
             self._full = True
-            self._filling_rate = 1 / (time_now - self._last_time_was_emptied)
-        #update filling_rate
+            #update filling_rate
+            self._filling_rate_last = 1 / time_now - self._last_time_was_emptied
 
     def empty_bin(self, time_now: int) -> float:
         """it empties a bin and returns the volume of trash the bin had b4 being emptied
@@ -299,7 +301,9 @@ class Bin(Entity):
             float: vol of trash b4 getting emptied
         """
         if not self._full:
-            self._filling_rate = self.get_percentage() / (time_now - self._last_time_was_emptied)
+            self._filling_rate_last = self.get_percentage() / (time_now - self._last_time_was_emptied)
+        self._filling_rates_mean[0] = self._filling_rates_mean[0] + self._filling_rate_last
+        self._filling_rates_mean[1] = self._filling_rates_mean[1] + 1
         x = self._vol_trash
         self._vol_trash = 0
         self._full = False
@@ -323,13 +327,26 @@ class Bin(Entity):
         """
         return self._capacity
 
-    def get_filling_rate(self) -> float:
-        """Gets the filling rate from this bin in %/s
+    def get_filling_rate_last(self) -> float:
+        """Gets the filling rate from this bin in %/s.
+        PS: For the mean since the start, use get_filling_rate_mean
 
         Returns:
             float: filling rate in (% / s)
         """
-        return self._filling_rate
+        return self._filling_rate_last
+    
+    def get_filling_rate_mean(self) -> float:
+        """Gets the mean of the filling rates each time this bin was emptied in %/s.
+        Considers all the trash put since the last time this bin was changed.
+        Changes considered: position, capacity.
+        PS: For the mean since last time emptied, use get_filling_rate_now
+
+        Returns:
+            float: mean filling rate in (% / s)
+        """
+        return self._filling_rates_mean[0] / self._filling_rates_mean[1]
+    
 
 class Trash_Potential:
     """Variables:

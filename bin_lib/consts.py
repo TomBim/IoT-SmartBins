@@ -24,9 +24,10 @@ COST_OF_CLEANING_A_STREET = 10
 EPSILON_DIST = 1e-3
 EPSILON_POT = 1e-20
 EPSILON_CHARGE = 1e-10 
+EPSILON_TEMPTR = 1e-10
 
 # time to update potentials
-TIME_TO_UPDATE_POTS = 1*DAY
+PERIOD_UPDATE_POTS = 1*DAY
 
 
 ### FOR POTENTIALS ###
@@ -41,3 +42,15 @@ MAXIMAL_ORDER = 3
 
 # weight of street sweeper opinion on reports
 STR_SWEEPER_WEIGHT = 10
+
+### FOR TEMPERATURE ###
+# division of streets (in meters)
+SIZE_OF_DIV_TEMPTR = 20
+
+# distance to be considered in the extremity (in meters)
+MAX_DIST_EXTREMITY = 3
+if MAX_DIST_EXTREMITY > SIZE_OF_DIV_TEMPTR:
+    raise ValueError("MAX_DIST_EXTREMITY > SIZE_OF_DIV_TEMPTR not allowed for now.")
+
+# rho/A for streets
+RHO_A = 10

@@ -75,7 +75,7 @@ class Map:
         new_street = Street(self._intersections[indexA], self._intersections[indexB], len(self._streets))
         self._streets.append(new_street)
         self._adj_matrix[indexA][indexB] = new_street.get_length()
-        self._adj_matrix[indexB][indexA] = new_street.get_length()
+        self._adj_matrix[indexB][indexA] = -new_street.get_length()
 
     def get_intersections_list(self) -> list[Intersection]:
         """CAREFUL: the elements in the list are the original ones"""
@@ -94,6 +94,16 @@ class Map:
         return self._streets[index]
 
     def search_for_a_street(self, intersection_A: Intersection, intersection_B: Intersection) -> Street:
+        """search for a street given the two intersections that define the street.
+        It doesn't need to be in the same order as the vector, since streetAB is the same as streetBA.
+
+        Args:
+            intersection_A (Intersection): one of the street's intersection
+            intersection_B (Intersection): the other street's intersection
+
+        Returns:
+            Street: _description_
+        """
         A = intersection_A.get_id()
         B = intersection_B.get_id()
         if A == B:

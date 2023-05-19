@@ -63,7 +63,7 @@ for sims in range(NUMBER_OF_SIMULATIONS):
             everything.empty_bins(time_now)
             
             for i in range(1,len(everything.get_bins_list())):
-                filling_rate_average[i] = (filling_rate_average[i] + everything.get_bins_list()[i].get_filling_rate()) / 2
+                filling_rate_average[i] = (filling_rate_average[i] + everything.get_bins_list()[i].get_filling_rate_last()) / 2
 
     # final_potential_map = assert_bins_pot(everything, filling_rate_average, com_points_1st, com_points_2nd, bins_2nd)
     # realocate_bins(everything, final_potential_map)

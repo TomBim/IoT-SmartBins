@@ -515,6 +515,12 @@ class All_Pots_and_Charges:
             return
         self._list_of_charges[index].move_to(new_pos)
 
+    def get_total_pot(self) -> Map_of_Potentials:
+        s = Map_of_Potentials(self._mapa, 1)
+        for map in self._maps_of_pot_one_order:
+            s = s + map
+        return s
+
 class Potential:
     def __init__(self, mapa: map.Map, order: int):
         """Represents the Potential of order 'order'. 
